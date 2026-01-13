@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FOMOff Options</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-fomoff-ui>
+    <div class="wrapper">
+      <div class="header">
+        <div class="logo"></div>
+        <div>
+          <h1>FOMOff Settings</h1>
+          <p>Mute manipulative shopping pressure with calm controls.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Global</h2>
+        <div class="row">
+          <div>
+            <strong>FOMOff enabled</strong>
+            <div class="footer">Turn on/off for all sites.</div>
+          </div>
+          <label class="switch"><input id="global-toggle" type="checkbox" /></label>
+        </div>
+        <div class="row">
+          <div>
+            <strong>Default mode</strong>
+            <div class="footer">Choose how strong the calm treatment feels.</div>
+          </div>
+        </div>
+        <div class="mode-grid">
+          <button class="mode" data-mode="calm">Calm</button>
+          <button class="mode" data-mode="zen">Zen Shopping</button>
+          <button class="mode" data-mode="off">Off</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Allowlist</h2>
+        <div class="footer">Sites you have allowed stay untouched.</div>
+        <div class="allowlist" id="allowlist"></div>
+      </div>
+
+      <div class="section">
+        <h2>Journal</h2>
+        <div class="row">
+          <div>
+            <strong>Track tactics locally</strong>
+            <div class="footer">Counts are stored only on this device.</div>
+          </div>
+          <label class="switch"><input id="journal-toggle" type="checkbox" /></label>
+        </div>
+        <div class="row">
+          <div>
+            <strong>Retention</strong>
+            <div class="footer">How long to keep local history.</div>
+          </div>
+          <select id="journal-retention" class="button">
+            <option value="7">7 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </div>
+        <div class="row">
+          <button class="button" id="export-journal">Export journal JSON</button>
+          <button class="button" id="delete-all">Delete all data</button>
+        </div>
+      </div>
+
+      <div class="section footer">
+        <strong>Privacy</strong>: No data leaves your device. No tracking. No analytics.
+      </div>
+    </div>
+
+    <script src="../../shared/types.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

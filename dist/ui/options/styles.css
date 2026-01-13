@@ -1,0 +1,141 @@
+:root {
+  --bg: #f7f3ec;
+  --ink: #1f2f30;
+  --muted: #617070;
+  --accent: #cc7638;
+  --teal: #2b8a8a;
+  --border: #d6caba;
+  --card: #ffffff;
+  --shadow: rgba(30, 42, 43, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Futura", "Trebuchet MS", "Gill Sans", "Century Gothic", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, #ffffff 0%, var(--bg) 40%, #e7efe8 100%);
+}
+
+.wrapper {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #2b8a8a, #6cb4ad);
+  box-shadow: 0 8px 20px rgba(42, 138, 138, 0.3);
+}
+
+.section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 12px 26px var(--shadow);
+}
+
+.section h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.button {
+  border: none;
+  background: #f7e3d1;
+  color: #7a4b1f;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.switch input {
+  appearance: none;
+  width: 44px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ced6d3;
+  position: relative;
+  outline: none;
+}
+
+.switch input::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 160ms ease;
+}
+
+.switch input:checked {
+  background: var(--teal);
+}
+
+.switch input:checked::after {
+  transform: translateX(18px);
+}
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.mode {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.mode.active {
+  border-color: var(--accent);
+  background: #fff1e3;
+}
+
+.allowlist {
+  display: grid;
+  gap: 8px;
+}
+
+.allowlist-item {
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.footer {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}

@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FOMOff Demo Shop</title>
+    <style>
+      body {
+        font-family: "Trebuchet MS", "Gill Sans", "Century Gothic", sans-serif;
+        margin: 0;
+        background: #f5f2ec;
+        color: #1f2f30;
+      }
+      header {
+        padding: 24px;
+        background: linear-gradient(120deg, #2b8a8a, #71b9b0);
+        color: white;
+      }
+      main {
+        padding: 24px;
+        display: grid;
+        gap: 24px;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      .card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid #d5c8b6;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+      }
+      .price {
+        font-size: 28px;
+        font-weight: bold;
+      }
+      .cta {
+        margin-top: 12px;
+        padding: 10px 16px;
+        background: #d07a3a;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 14px;
+      }
+      .ticker {
+        background: #fff1e3;
+        border-radius: 10px;
+        padding: 8px 12px;
+        display: inline-block;
+        margin-top: 10px;
+      }
+      .overlay {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        background: #ffffff;
+        border: 1px solid #d2d9d7;
+        border-radius: 16px;
+        padding: 12px 14px;
+        width: 240px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+      }
+      .overlay button {
+        margin-top: 10px;
+        width: 100%;
+        background: #2b8a8a;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 8px;
+      }
+      .addon {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .chat {
+        position: fixed;
+        bottom: 140px;
+        right: 20px;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 12px 14px;
+        border: 1px solid #d2d9d7;
+        width: 200px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>FOMOff Demo Shop</h1>
+      <p>Try the extension here. Everything stays offline.</p>
+    </header>
+    <main>
+      <div class="card">
+        <h2>Midnight Ceramic Mug</h2>
+        <div class="price">$28</div>
+        <div class="ticker">Deal ends in 00:12:03</div>
+        <p class="ticker">Only 3 left in stock - selling fast</p>
+        <p>23 people are viewing this item right now.</p>
+        <button class="cta">Add to cart</button>
+        <div class="addon">
+          <input type="checkbox" checked />
+          <label>Protect your order with shipping insurance</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Weekend Travel Set</h2>
+        <p>Flash sale - limited time bundle.</p>
+        <button class="cta">Buy now</button>
+      </div>
+    </main>
+
+    <div class="chat">
+      <strong>Jessica from support</strong>
+      <p>Need help? I'm here to help you check out.</p>
+    </div>
+
+    <div class="overlay">
+      <strong>Wait! Spin the wheel</strong>
+      <p>Unlock 15% off before you go.</p>
+      <button>Spin the wheel</button>
+    </div>
+  </body>
+</html>
