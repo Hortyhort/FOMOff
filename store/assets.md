@@ -9,6 +9,7 @@ Icons:
 Screenshots (recommended 1280x800 or 1280x720):
 - Reality Check side panel
 - Muted element badge in-page
+- Shareable Reality Check card
 - Journal tab
 - Options page
 - Demo page with multiple detections

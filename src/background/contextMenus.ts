@@ -21,11 +21,11 @@
         title: "Unmute this element",
         contexts: ["all"]
       });
-      chrome.contextMenus.create({
-        id: MENU_IDS.ALLOW_SITE,
-        title: "Always allow on this site",
-        contexts: ["all"]
-      });
+    chrome.contextMenus.create({
+      id: MENU_IDS.ALLOW_SITE,
+      title: "Trust this site",
+      contexts: ["all"]
+    });
     });
   }
 

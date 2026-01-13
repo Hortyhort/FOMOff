@@ -3,6 +3,8 @@
 
   const elements = {
     globalToggle: document.getElementById("global-toggle"),
+    badgesToggle: document.getElementById("badges-toggle"),
+    introReset: document.getElementById("intro-reset"),
     journalToggle: document.getElementById("journal-toggle"),
     journalRetention: document.getElementById("journal-retention"),
     allowlist: document.getElementById("allowlist"),
@@ -26,7 +28,7 @@
     if (!entries.length) {
       const empty = document.createElement("div");
       empty.className = "footer";
-      empty.textContent = "No sites are allowlisted yet.";
+      empty.textContent = "No trusted sites yet.";
       elements.allowlist.appendChild(empty);
       return;
     }
@@ -51,6 +53,7 @@
   function updateUI(settings) {
     currentSettings = settings;
     elements.globalToggle.checked = settings.enabled;
+    elements.badgesToggle.checked = settings.showBadges !== false;
     elements.journalToggle.checked = settings.journalingEnabled;
     elements.journalRetention.value = String(settings.journalRetentionDays || 30);
     updateModeUI(settings.mode);
@@ -80,6 +83,20 @@
   elements.globalToggle.addEventListener("change", () => {
     chrome.runtime.sendMessage(
       { type: "fomoff:set-global-enabled", enabled: elements.globalToggle.checked },
+      refresh
+    );
+  });
+
+  elements.badgesToggle.addEventListener("change", () => {
+    chrome.runtime.sendMessage(
+      { type: "fomoff:update-settings", payload: { showBadges: elements.badgesToggle.checked } },
+      refresh
+    );
+  });
+
+  elements.introReset.addEventListener("click", () => {
+    chrome.runtime.sendMessage(
+      { type: "fomoff:update-settings", payload: { hasSeenIntro: false } },
       refresh
     );
   });

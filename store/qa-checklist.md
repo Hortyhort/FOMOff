@@ -4,11 +4,16 @@
 - Verify side panel opens and shows counts on the demo page.
 - Confirm global On/Off disables all treatments.
 - Confirm per-site toggle disables treatments and persists.
-- Confirm allowlist keeps a site untouched after reload.
+- Confirm trusted site keeps a site untouched after reload.
+- Confirm "Pause on this site" and "Trust this site" labels behave as expected.
+- Confirm "Snooze 1 hour" pauses and auto-resumes after the window.
 - Check Calm vs Zen modes apply different strength.
 - Validate right-click Mute/Unmute works on page elements.
 - Verify inspector shortcut (Ctrl+Shift+X) toggles picker.
 - Ensure checkout buttons remain clickable and unchanged.
+- Verify on-page badges render near detected elements and do not block clicks.
+- Verify Share report exports a PNG and Copy image works on supported systems.
+- Confirm intro overlay appears once, can be skipped, and \"Show intro again\" replays it.
 - Confirm journal toggle stops recording.
 - Export journal JSON and validate contents.
 - Delete all data resets settings and clears journal.

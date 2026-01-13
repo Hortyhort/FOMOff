@@ -17,9 +17,11 @@
     lastContextElement: null,
     journalingEnabled: true,
     journalRetentionDays: 30,
+    showBadges: true,
     falsePositives: new Set(),
     inspector: null,
-    onPick: null
+    onPick: null,
+    snoozeTimer: null
   };
 
   content.state = state;
@@ -28,6 +30,9 @@
     const merged = Object.assign({}, shared.DEFAULT_SETTINGS, stored || {});
     merged.siteOverrides = merged.siteOverrides || {};
     merged.falsePositives = merged.falsePositives || [];
+    if (typeof merged.showBadges === "undefined") {
+      merged.showBadges = typeof merged.badgesEnabled !== "undefined" ? merged.badgesEnabled : true;
+    }
     return merged;
   }
 
@@ -42,9 +47,15 @@
   function computeEnabled(settings, host) {
     const siteOverride = getSiteOverride(settings, host);
     const globalEnabled = settings.enabled && settings.mode !== shared.MODES.OFF;
-    const siteEnabled = siteOverride.enabled !== false && !siteOverride.allowlist;
+    const snoozed = siteOverride.snoozeUntil && siteOverride.snoozeUntil > Date.now();
+    const siteEnabled = siteOverride.enabled !== false && !siteOverride.allowlist && !snoozed;
     const mode = siteOverride.mode || settings.mode;
-    return { enabled: globalEnabled && siteEnabled && mode !== shared.MODES.OFF, mode };
+    return {
+      enabled: globalEnabled && siteEnabled && mode !== shared.MODES.OFF,
+      mode,
+      snoozed,
+      snoozeUntil: siteOverride.snoozeUntil || null
+    };
   }
 
   function buildContext() {
@@ -89,6 +100,19 @@
     return record;
   }
 
+  function setBadgeMode(enabled) {
+    state.showBadges = !!enabled;
+    const shouldShow = state.showBadges && state.enabled;
+    if (document.body) {
+      document.body.dataset.fomoffInlineBadges = shouldShow ? "false" : "true";
+    }
+    if (!content.badges) return;
+    content.badges.setEnabled(shouldShow);
+    if (shouldShow) {
+      content.badges.sync(Array.from(state.records.values()));
+    }
+  }
+
   function applyDetections(detections) {
     if (!detections.length) return;
     const counts = {};
@@ -99,7 +123,10 @@
       const signature = buildSignature(state.host, detection, snippet);
       if (state.falsePositives.has(signature)) return;
       content.applyTreatment(element, detection, state.mode);
-      addRecord(element, detection, snippet);
+      const record = addRecord(element, detection, snippet);
+      if (state.showBadges && content.badges) {
+        content.badges.addBadge(element, record);
+      }
       counts[detection.category] = (counts[detection.category] || 0) + 1;
     });
 
@@ -133,6 +160,9 @@
       content.removeBadge(element);
       content.restoreElement(element);
     });
+    if (content.badges) {
+      content.badges.clearBadges();
+    }
     state.records.clear();
     state.order = [];
   }
@@ -147,6 +177,7 @@
       scanInitial();
     }
     notifyUpdate();
+    setBadgeMode(state.showBadges);
   }
 
   function setMode(mode) {
@@ -159,6 +190,23 @@
       }
     });
     notifyUpdate();
+  }
+
+  function scheduleSnooze(settings) {
+    if (state.snoozeTimer) {
+      clearTimeout(state.snoozeTimer);
+      state.snoozeTimer = null;
+    }
+    const override = getSiteOverride(settings, state.host);
+    if (!override.snoozeUntil) return;
+    const remaining = override.snoozeUntil - Date.now();
+    if (remaining <= 0) return;
+    state.snoozeTimer = setTimeout(async () => {
+      const updated = await loadSettings();
+      const status = computeEnabled(updated, state.host);
+      state.mode = status.mode;
+      setEnabled(status.enabled);
+    }, remaining + 200);
   }
 
   function notifyUpdate() {
@@ -206,9 +254,15 @@
       if (entry && entry.record.muted) {
         content.removeBadge(element);
         content.restoreElement(element);
+        if (content.badges) {
+          content.badges.removeBadge(entry.record.id);
+        }
         entry.record.muted = false;
       } else if (entry) {
         content.applyTreatment(element, entry.record, state.mode);
+        if (state.showBadges && content.badges) {
+          content.badges.addBadge(element, entry.record);
+        }
         entry.record.muted = true;
       }
       notifyUpdate();
@@ -223,7 +277,10 @@
     };
     content.applyTreatment(element, detection, state.mode);
     element.dataset.fomoffManual = "true";
-    addRecord(element, detection, shared.getTextSnippet(element, 120));
+    const record = addRecord(element, detection, shared.getTextSnippet(element, 120));
+    if (state.showBadges && content.badges) {
+      content.badges.addBadge(element, record);
+    }
     notifyUpdate();
   }
 
@@ -232,6 +289,9 @@
     if (!entry) return;
     content.removeBadge(entry.element);
     content.restoreElement(entry.element);
+    if (content.badges) {
+      content.badges.removeBadge(id);
+    }
     entry.record.muted = false;
     notifyUpdate();
   }
@@ -243,6 +303,9 @@
       unmuteById(id);
     } else {
       content.applyTreatment(entry.element, entry.record, state.mode);
+      if (state.showBadges && content.badges) {
+        content.badges.addBadge(entry.element, entry.record);
+      }
       entry.record.muted = true;
       notifyUpdate();
     }
@@ -334,10 +397,19 @@
     state.journalingEnabled = settings.journalingEnabled;
     state.journalRetentionDays = settings.journalRetentionDays;
     state.falsePositives = new Set(settings.falsePositives || []);
+    state.showBadges = settings.showBadges !== false;
+    if (content.badges) {
+      content.badges.onHide = (id) => {
+        const entry = state.records.get(id);
+        if (entry) entry.record.badgeHidden = true;
+      };
+    }
 
     const status = computeEnabled(settings, state.host);
     state.mode = status.mode;
     setEnabled(status.enabled);
+    setBadgeMode(state.showBadges);
+    scheduleSnooze(settings);
 
     document.addEventListener("contextmenu", onContextMenu, true);
   }
@@ -349,9 +421,12 @@
     state.journalingEnabled = settings.journalingEnabled;
     state.journalRetentionDays = settings.journalRetentionDays;
     state.falsePositives = new Set(settings.falsePositives || []);
+    state.showBadges = settings.showBadges !== false;
     const status = computeEnabled(settings, state.host);
     state.mode = status.mode;
     setEnabled(status.enabled);
+    setBadgeMode(state.showBadges);
+    scheduleSnooze(settings);
   });
 
   init();

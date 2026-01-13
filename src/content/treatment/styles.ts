@@ -42,7 +42,7 @@
         position: relative !important;
       }
 
-      .fomoff-muted[data-fomoff-badge]::after {
+      body[data-fomoff-inline-badges="true"] .fomoff-muted[data-fomoff-badge]::after {
         content: attr(data-fomoff-badge);
         position: absolute;
         top: -10px;

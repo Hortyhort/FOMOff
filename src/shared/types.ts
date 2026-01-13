@@ -39,6 +39,8 @@
     mode: MODES.CALM,
     journalingEnabled: true,
     journalRetentionDays: 30,
+    showBadges: true,
+    hasSeenIntro: false,
     siteOverrides: {},
     falsePositives: []
   };

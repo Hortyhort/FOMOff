@@ -42,8 +42,8 @@
     const actions = document.createElement("div");
     actions.className = "item-actions";
     actions.appendChild(createAction(item.muted ? "Unmute" : "Mute", "unmute", "primary"));
-    actions.appendChild(createAction("Preview", "preview"));
-    actions.appendChild(createAction("Allow site", "allow-site"));
+    actions.appendChild(createAction("Before/After", "preview"));
+    actions.appendChild(createAction("Trust this site", "allow-site"));
     actions.appendChild(createAction("False positive", "false-positive"));
 
     wrapper.appendChild(header);

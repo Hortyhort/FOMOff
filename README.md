@@ -7,6 +7,7 @@ FOMOff is a Manifest V3 Chrome extension that mutes manipulative shopping pressu
 - Applies a calm visual treatment (opacity, saturation, weight, subtle badges) instead of deleting content.
 - Offers per-site controls, explainable reasons, and reversible unmute actions.
 - Optional local journal to track daily counts (local-only, exportable JSON).
+- Shareable Reality Check card (PNG) and on-page badges for screenshot-ready clarity.
 
 ## How it works
 1. A lightweight content script scans text nodes with curated patterns.
@@ -21,6 +22,7 @@ Example detections:
 Screenshot placeholders:
 - `docs/screenshot-sidepanel.png` (side panel summary)
 - `docs/screenshot-muted-element.png` (badge + muted element)
+- `docs/screenshot-share-card.png` (Reality Check card)
 - `docs/screenshot-journal.png` (journal tab)
 - `docs/screenshot-options.png` (options page)
 - `docs/screenshot-demo.png` (demo page)

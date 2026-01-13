@@ -7,6 +7,9 @@
     const merged = Object.assign({}, shared.DEFAULT_SETTINGS, stored || {});
     merged.siteOverrides = merged.siteOverrides || {};
     merged.falsePositives = merged.falsePositives || [];
+    if (typeof merged.showBadges === "undefined") {
+      merged.showBadges = typeof merged.badgesEnabled !== "undefined" ? merged.badgesEnabled : true;
+    }
     return merged;
   }
 
@@ -24,7 +27,12 @@
 
   async function updateSettings(partial) {
     const settings = await getSettings();
-    const updated = Object.assign({}, settings, partial);
+    const next = Object.assign({}, partial);
+    if (typeof next.showBadges === "undefined" && typeof next.badgesEnabled !== "undefined") {
+      next.showBadges = next.badgesEnabled;
+    }
+    delete next.badgesEnabled;
+    const updated = Object.assign({}, settings, next);
     await saveSettings(updated);
     return updated;
   }
@@ -39,7 +47,8 @@
   async function setSiteEnabled(host, enabled, allowlist) {
     return setSiteOverride(host, {
       enabled,
-      allowlist: !!allowlist
+      allowlist: !!allowlist,
+      snoozeUntil: null
     });
   }
 

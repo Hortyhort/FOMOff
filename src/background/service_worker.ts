@@ -26,6 +26,8 @@ importScripts(
     "content/treatment/apply.js",
     "content/detector/scan.js",
     "content/detector/observe.js",
+    "content/badges/position.js",
+    "content/badges/layer.js",
     "content/inspector/picker.js",
     "content/index.js"
   ];
@@ -48,11 +50,13 @@ importScripts(
     const settings = await background.storage.getSettings();
     const host = shared.getHostFromUrl(url);
     const override = settings.siteOverrides[host] || {};
+    const snoozed = override.snoozeUntil && override.snoozeUntil > Date.now();
     const enabled =
       settings.enabled &&
       settings.mode !== shared.MODES.OFF &&
       override.enabled !== false &&
-      !override.allowlist;
+      !override.allowlist &&
+      !snoozed;
     return enabled;
   }
 
@@ -61,6 +65,21 @@ importScripts(
     if (await shouldInject(url)) {
       await ensureInjected(tabId);
     }
+  }
+
+  function persistSiteState(host, settings) {
+    if (!host || !settings) return;
+    const override = settings.siteOverrides[host] || {};
+    const snoozed = override.snoozeUntil && override.snoozeUntil > Date.now();
+    const trusted = !!override.allowlist;
+    const paused = trusted || override.enabled === false || snoozed;
+    chrome.storage.local.set({
+      siteState: {
+        trusted,
+        paused,
+        snoozeUntil: override.snoozeUntil || null
+      }
+    });
   }
 
   function initSidePanel() {
@@ -130,14 +149,31 @@ importScripts(
     if (message.type === "fomoff:set-site-enabled") {
       background.storage
         .setSiteEnabled(message.host, !!message.enabled, false)
-        .then((settings) => sendResponse(settings));
+        .then((settings) => {
+          persistSiteState(message.host, settings);
+          sendResponse(settings);
+        });
       return true;
     }
 
     if (message.type === "fomoff:allow-site") {
-      background.storage.setSiteEnabled(message.host, false, true).then((settings) => {
-        sendResponse(settings);
-      });
+      background.storage
+        .setSiteOverride(message.host, { enabled: false, allowlist: true, snoozeUntil: null })
+        .then((settings) => {
+          persistSiteState(message.host, settings);
+          sendResponse(settings);
+        });
+      return true;
+    }
+
+    if (message.type === "fomoff:snooze-site") {
+      const snoozeUntil = Date.now() + 60 * 60 * 1000;
+      background.storage
+        .setSiteOverride(message.host, { enabled: false, allowlist: false, snoozeUntil })
+        .then((settings) => {
+          persistSiteState(message.host, settings);
+          sendResponse(settings);
+        });
       return true;
     }
 
