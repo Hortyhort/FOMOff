@@ -18,7 +18,7 @@
         </div>
         <label class="switch">
           <span>On</span>
-          <input id="global-toggle" type="checkbox" />
+          <input id="global-toggle" type="checkbox" aria-label="FOMOff enabled" />
         </label>
       </div>
 
@@ -58,7 +58,7 @@
           <div class="section-title">Mode</div>
           <button class="info-icon" data-info="mode" aria-label="About modes">i</button>
         </div>
-        <div class="modes">
+        <div class="modes" role="group" aria-label="Mode selection">
           <button class="mode" data-mode="calm">Calm</button>
           <button class="mode" data-mode="zen">Zen Shopping</button>
           <button class="mode" data-mode="off">Off</button>
@@ -70,7 +70,9 @@
         <div class="section-title">Summary</div>
         <div class="summary">
           <div class="summary-card">
-            <div class="summary-count" id="total-count">0</div>
+            <div class="summary-count" id="total-count" role="status" aria-live="polite" aria-atomic="true">
+              0
+            </div>
             <div class="summary-label">tactics muted</div>
           </div>
         </div>
@@ -78,12 +80,14 @@
       </div>
 
       <div class="section">
-        <div class="tabs">
-          <button class="tab active" data-tab="detections">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="detections" role="tab" aria-controls="detections-tab" aria-selected="true">
             Found (<span id="found-count">0</span>)
             <span class="tab-dot" id="found-dot" hidden></span>
           </button>
-          <button class="tab" data-tab="journal">Journal</button>
+          <button class="tab" data-tab="journal" role="tab" aria-controls="journal-tab" aria-selected="false">
+            Journal
+          </button>
         </div>
       </div>
 
@@ -144,7 +148,7 @@
     </div>
 
     <div class="sheet" id="info-sheet" hidden>
-      <div class="sheet-card">
+      <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
         <div class="sheet-header">
           <div class="sheet-title" id="sheet-title"></div>
           <button class="link-button" id="sheet-close">Close</button>
@@ -156,7 +160,14 @@
     <div class="intro" id="intro-overlay" hidden>
       <div class="intro-backdrop"></div>
       <div class="intro-highlight" id="intro-highlight"></div>
-      <div class="intro-card" id="intro-card">
+      <div
+        class="intro-card"
+        id="intro-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="intro-title"
+        aria-describedby="intro-text"
+      >
         <div class="intro-step" id="intro-step">1/3</div>
         <div class="intro-title" id="intro-title"></div>
         <div class="intro-text" id="intro-text"></div>

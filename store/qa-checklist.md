@@ -1,5 +1,6 @@
 # Launch QA Checklist
 
+- Use `docs/REVIEWER_CHECKLIST.md` for critical gate checks.
 - Install from `dist/` on chrome://extensions (Developer mode).
 - Verify side panel opens and shows counts on the demo page.
 - Confirm global On/Off disables all treatments.

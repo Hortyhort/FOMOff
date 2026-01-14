@@ -128,6 +128,7 @@
       elements.sheetBody.appendChild(li);
     });
     elements.infoSheet.hidden = false;
+    elements.sheetClose.focus();
   }
 
   function closeSheet() {
@@ -175,6 +176,7 @@
     document.querySelectorAll(".mode").forEach((button) => {
       const isActive = button.dataset.mode === mode;
       button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
     });
     if (mode === shared.MODES.CALM) {
       elements.modeNote.textContent = "Recommended - gentle dimming, minimal risk.";
@@ -394,6 +396,7 @@
   function startIntro() {
     elements.introOverlay.hidden = false;
     showIntroStep(0);
+    elements.introNext.focus();
   }
 
   function closeIntro(markSeen) {
@@ -528,9 +531,12 @@
   }
 
   function setActiveTab(tabName) {
-    elements.tabs.forEach((tab) => tab.classList.remove("active"));
-    const target = elements.tabs.find((tab) => tab.dataset.tab === tabName);
-    if (target) target.classList.add("active");
+    elements.tabs.forEach((tab) => {
+      const isActive = tab.dataset.tab === tabName;
+      tab.classList.toggle("active", isActive);
+      tab.setAttribute("aria-selected", String(isActive));
+      tab.tabIndex = isActive ? 0 : -1;
+    });
     elements.detectionsTab.hidden = tabName !== "detections";
     elements.journalTab.hidden = tabName !== "journal";
     if (tabName === "journal") {

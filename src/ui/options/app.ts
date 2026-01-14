@@ -16,7 +16,9 @@
 
   function updateModeUI(mode) {
     document.querySelectorAll(".mode").forEach((button) => {
-      button.classList.toggle("active", button.dataset.mode === mode);
+      const isActive = button.dataset.mode === mode;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
     });
   }
 
