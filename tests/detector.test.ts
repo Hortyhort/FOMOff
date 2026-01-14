@@ -39,3 +39,31 @@ test("detects forced add-on text", () => {
   const hit = patterns.forcedAddon.some((pattern) => pattern.test(sample));
   assert(hit, "expected forced add-on pattern to match");
 });
+
+test("does not flag limited edition as scarcity", () => {
+  const patterns = globalThis.FOMOff.content.patterns;
+  const sample = "Limited edition print";
+  const hit = patterns.scarcity.some((pattern) => pattern.test(sample));
+  assert(!hit, "expected scarcity pattern to ignore limited edition");
+});
+
+test("does not flag popular opinion as social proof", () => {
+  const patterns = globalThis.FOMOff.content.patterns;
+  const sample = "Popular opinion: teal is calming";
+  const hit = patterns.socialProof.some((pattern) => pattern.test(sample));
+  assert(!hit, "expected social proof patterns to ignore popular opinion");
+});
+
+test("does not flag sale ends when it ends as urgency", () => {
+  const patterns = globalThis.FOMOff.content.patterns;
+  const sample = "Sale ends when it ends";
+  const hit = patterns.urgency.some((pattern) => pattern.test(sample));
+  assert(!hit, "expected urgency patterns to ignore generic phrasing");
+});
+
+test("does not flag need help button without question mark", () => {
+  const patterns = globalThis.FOMOff.content.patterns;
+  const sample = "Need help button";
+  const hit = patterns.fakeChat.some((pattern) => pattern.test(sample));
+  assert(!hit, "expected fake chat patterns to require direct prompt");
+});

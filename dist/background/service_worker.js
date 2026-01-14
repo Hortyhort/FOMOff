@@ -88,6 +88,36 @@ importScripts(
     }
   }
 
+  function formatBadgeText(total) {
+    if (!Number.isFinite(total) || total <= 0) return "";
+    if (total > 99) return "99+";
+    return String(total);
+  }
+
+  function formatBadgeTitle(payload) {
+    if (!payload) return "FOMOff";
+    const total = Number.isFinite(payload.total) ? payload.total : 0;
+    if (total <= 0) return "FOMOff: clean site";
+    const counts = payload.counts || {};
+    const top = Object.entries(counts)
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([category]) => shared.CATEGORY_LABELS[category] || category);
+    const detail = top.length ? ` • ${top.join(", ")}` : "";
+    return `FOMOff: ${total} muted${detail}`;
+  }
+
+  function updateActionBadge(tabId, payload) {
+    if (!chrome.action || !tabId) return;
+    const total = payload && Number.isFinite(payload.total) ? payload.total : 0;
+    const text = formatBadgeText(total);
+    chrome.action.setBadgeText({ text, tabId });
+    chrome.action.setBadgeBackgroundColor({ color: "#2a8a8a", tabId });
+    const title = formatBadgeTitle(payload);
+    chrome.action.setTitle({ title, tabId });
+  }
+
   chrome.runtime.onInstalled.addListener(() => {
     initSidePanel();
     background.initContextMenus();
@@ -123,6 +153,11 @@ importScripts(
     if (message.type === "fomoff:get-settings") {
       background.storage.getSettings().then((settings) => sendResponse(settings));
       return true;
+    }
+
+    if (message.type === "fomoff:state" && sender && sender.tab && sender.tab.id) {
+      updateActionBadge(sender.tab.id, message.payload);
+      return false;
     }
 
     if (message.type === "fomoff:set-global-enabled") {

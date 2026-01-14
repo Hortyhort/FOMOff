@@ -15,11 +15,14 @@
     foundDot: document.getElementById("found-dot"),
     summaryGroups: document.getElementById("summary-groups"),
     summarySection: document.getElementById("summary-section"),
+    summaryNote: document.getElementById("summary-note"),
     modeNote: document.getElementById("mode-note"),
     detectionsList: document.getElementById("detections-list"),
     cleanState: document.getElementById("clean-state"),
+    shareQuick: document.getElementById("share-quick"),
+    shareQuickCopy: document.getElementById("share-quick-copy"),
+    shareQuickOptions: document.getElementById("share-quick-options"),
     shareBlock: document.getElementById("share-block"),
-    shareToggle: document.getElementById("share-toggle"),
     sharePanel: document.getElementById("share-panel"),
     sharePreview: document.getElementById("share-preview"),
     shareHideSite: document.getElementById("share-hide-site"),
@@ -44,6 +47,10 @@
     journalList: document.getElementById("journal-list"),
     journalToggle: document.getElementById("journal-toggle"),
     journalRetention: document.getElementById("journal-retention"),
+    journalRecap: document.getElementById("journal-recap"),
+    journalWeeklyCount: document.getElementById("journal-weekly-count"),
+    journalRecapCopy: document.getElementById("journal-recap-copy"),
+    journalRecapDownload: document.getElementById("journal-recap-download"),
     exportJournal: document.getElementById("export-journal"),
     deleteAll: document.getElementById("delete-all")
   };
@@ -58,7 +65,9 @@
     shareOpen: false,
     newFindings: false,
     tabInitialized: false,
-    introIndex: 0
+    introIndex: 0,
+    weeklySummary: null,
+    forceIntro: false
   };
 
   const GROUPS = [
@@ -102,7 +111,25 @@
         "Snooze: take a 1-hour break without forgetting your settings.",
         "Trust: keep this site untouched until you remove trust."
       ]
+    },
+    permissions: {
+      title: "Why we need access",
+      items: [
+        "We read the page to detect pressure tactics and dim them in place.",
+        "All processing stays on your device - nothing leaves the browser.",
+        "We never use external servers or analytics."
+      ]
     }
+  };
+
+  const SUMMARY_PHRASES = {
+    [shared.CATEGORIES.URGENCY]: "urgency cues",
+    [shared.CATEGORIES.SCARCITY]: "scarcity cues",
+    [shared.CATEGORIES.SOCIAL_PROOF]: "social proof nudges",
+    [shared.CATEGORIES.FAKE_CHAT]: "fake chat prompts",
+    [shared.CATEGORIES.NAG_OVERLAY]: "interrupting overlays",
+    [shared.CATEGORIES.FORCED_ADDON]: "pre-checked add-ons",
+    [shared.CATEGORIES.MANUAL]: "manual mutes"
   };
 
   function getTotal(payload) {
@@ -117,6 +144,27 @@
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
+  function parseDateKey(dateKey) {
+    const date = new Date(`${dateKey}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function computeWeeklySummary(journal) {
+    const summary = { total: 0, counts: {} };
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 6);
+    Object.entries(journal || {}).forEach(([dateKey, entry]) => {
+      const date = parseDateKey(dateKey);
+      if (!date || date < cutoff) return;
+      summary.total += entry.total || 0;
+      const categories = entry.categories || {};
+      Object.keys(categories).forEach((category) => {
+        summary.counts[category] = (summary.counts[category] || 0) + categories[category];
+      });
+    });
+    return summary;
+  }
+
   function openSheet(key) {
     const info = INFO_CONTENT[key];
     if (!info) return;
@@ -128,11 +176,17 @@
       elements.sheetBody.appendChild(li);
     });
     elements.infoSheet.hidden = false;
+    elements.infoSheet.style.display = "flex";
     elements.sheetClose.focus();
+  }
+
+  function isIntroOpen() {
+    return !elements.introOverlay.hidden && elements.introOverlay.style.display !== "none";
   }
 
   function closeSheet() {
     elements.infoSheet.hidden = true;
+    elements.infoSheet.style.display = "none";
   }
 
   function getSiteStatus(settings) {
@@ -186,6 +240,19 @@
     } else {
       elements.modeNote.textContent = "No page changes on this site.";
     }
+  }
+
+  function getSummaryLine(counts) {
+    const entries = Object.entries(counts || {})
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1]);
+    if (!entries.length) return "";
+    const labels = entries.slice(0, 2).map(([category]) => SUMMARY_PHRASES[category] || category.toLowerCase());
+    const line = labels.length === 1 ? labels[0] : `${labels[0]} and ${labels[1]}`;
+    if (entries.length > 2) {
+      return `We dimmed ${line} and more.`;
+    }
+    return `We dimmed ${line}.`;
   }
 
   function renderSummaryGroups(counts) {
@@ -280,8 +347,12 @@
     elements.summarySection.classList.toggle("clean", total === 0);
     if (total === 0) {
       elements.summaryGroups.innerHTML = "";
+      elements.summaryNote.hidden = true;
       return;
     }
+    const summaryLine = getSummaryLine(payload.counts || {});
+    elements.summaryNote.textContent = summaryLine;
+    elements.summaryNote.hidden = !summaryLine;
     renderSummaryGroups(payload.counts || {});
   }
 
@@ -292,6 +363,18 @@
       total: payload.total || 0,
       counts: payload.counts || {},
       snippets: items
+    };
+  }
+
+  function getWeeklyShareData(summary) {
+    return {
+      host: "Weekly recap",
+      total: summary.total || 0,
+      counts: summary.counts || {},
+      snippets: [],
+      headline: "FOMOff - Weekly Recap",
+      subhead: "pressure tactics muted (last 7 days)",
+      footer: "FOMOff - Weekly Recap"
     };
   }
 
@@ -309,13 +392,16 @@
 
   function updateShareSection(payload) {
     const total = getTotal(payload);
+    elements.shareQuick.hidden = total <= 0;
     elements.shareBlock.hidden = total <= 0;
     elements.shareBlock.style.display = total <= 0 ? "none" : "grid";
     if (total <= 0) {
       elements.sharePanel.hidden = true;
       state.shareOpen = false;
+      elements.shareQuickOptions.textContent = "More options";
       return;
     }
+    elements.shareQuickOptions.textContent = state.shareOpen ? "Hide options" : "More options";
     if (state.shareOpen) {
       renderSharePreview(payload);
     }
@@ -396,12 +482,19 @@
 
   function startIntro() {
     elements.introOverlay.hidden = false;
+    elements.introOverlay.removeAttribute("hidden");
+    elements.introOverlay.style.display = "block";
     showIntroStep(0);
     elements.introNext.focus();
   }
 
   function closeIntro(markSeen) {
     elements.introOverlay.hidden = true;
+    elements.introOverlay.setAttribute("hidden", "");
+    elements.introOverlay.style.display = "none";
+    elements.introHighlight.style.display = "none";
+    closeSheet();
+    state.forceIntro = false;
     if (markSeen) {
       chrome.runtime.sendMessage({ type: "fomoff:update-settings", payload: { hasSeenIntro: true } }, (settings) => {
         if (settings) updateSettingsUI(settings);
@@ -426,11 +519,27 @@
     downloadShareImage(blob);
   }
 
-  function downloadShareImage(blob) {
+  async function copyWeeklyRecap() {
+    if (!shareCard || !state.weeklySummary) return;
+    const data = getWeeklyShareData(state.weeklySummary);
+    const blob = await shareCard.renderBlob(data);
+    if (!blob) return;
+    if (navigator.clipboard && window.ClipboardItem) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        return;
+      } catch (error) {
+        // Fallback to download below.
+      }
+    }
+    downloadShareImage(blob, "fomoff-weekly-recap.png");
+  }
+
+  function downloadShareImage(blob, filename) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "fomoff-reality-check.png";
+    link.download = filename || "fomoff-reality-check.png";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
@@ -460,9 +569,13 @@
     updateModeUI(settings.mode);
     elements.journalToggle.checked = settings.journalingEnabled;
     elements.journalRetention.value = String(settings.journalRetentionDays || 30);
-    if (!settings.hasSeenIntro && elements.introOverlay.hidden) {
+    if (!settings.journalingEnabled) {
+      elements.journalRecap.hidden = true;
+    }
+    if ((state.forceIntro || !settings.hasSeenIntro) && !isIntroOpen()) {
       startIntro();
     }
+    state.forceIntro = false;
   }
 
   function requestState() {
@@ -484,7 +597,12 @@
     chrome.runtime.sendMessage({ type: "fomoff:get-settings" }, (settings) => {
       if (settings) {
         updateSettingsUI(settings);
+        return;
       }
+      chrome.storage.local.get(["settings"], (result) => {
+        const merged = Object.assign({}, shared.DEFAULT_SETTINGS, result.settings || {});
+        updateSettingsUI(merged);
+      });
     });
   }
 
@@ -558,6 +676,13 @@
   function loadJournal() {
     chrome.runtime.sendMessage({ type: "fomoff:get-journal" }, (journal) => {
       elements.journalList.innerHTML = "";
+      const summary = computeWeeklySummary(journal || {});
+      state.weeklySummary = summary;
+      const showRecap = state.settings && state.settings.journalingEnabled && summary.total > 0;
+      elements.journalRecap.hidden = !showRecap;
+      if (showRecap) {
+        elements.journalWeeklyCount.textContent = String(summary.total);
+      }
       const entries = Object.entries(journal || {}).sort((a, b) => (a[0] < b[0] ? 1 : -1));
       if (!entries.length) {
         const empty = document.createElement("div");
@@ -596,9 +721,13 @@
   }
 
   function init() {
+    refreshSettings();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
-      if (!tab || !tab.id || !tab.url) return;
+      if (!tab || !tab.id || !tab.url) {
+        updateFromPayload({ total: 0, counts: {}, items: [] });
+        return;
+      }
       state.tabId = tab.id;
       try {
         state.host = new URL(tab.url).host;
@@ -608,7 +737,6 @@
       elements.siteHost.textContent = state.host || "(no site)";
 
       chrome.runtime.sendMessage({ type: "fomoff:ensure-injected", tabId: state.tabId }, () => {
-        refreshSettings();
         requestState();
       });
     });
@@ -685,9 +813,10 @@
     );
   });
 
-  elements.shareToggle.addEventListener("click", () => {
+  elements.shareQuickOptions.addEventListener("click", () => {
     state.shareOpen = !state.shareOpen;
     elements.sharePanel.hidden = !state.shareOpen;
+    elements.shareQuickOptions.textContent = state.shareOpen ? "Hide options" : "More options";
     if (state.shareOpen && state.lastPayload) {
       renderSharePreview(state.lastPayload);
     }
@@ -699,6 +828,15 @@
     }
   });
 
+  elements.shareQuickCopy.addEventListener("click", async () => {
+    const original = elements.shareQuickCopy.textContent;
+    await copyShareImage();
+    elements.shareQuickCopy.textContent = "Copied";
+    setTimeout(() => {
+      elements.shareQuickCopy.textContent = original;
+    }, 1500);
+  });
+
   elements.shareCopy.addEventListener("click", copyShareImage);
   elements.shareDownload.addEventListener("click", async () => {
     if (!shareCard || !state.lastPayload) return;
@@ -708,7 +846,23 @@
     if (blob) downloadShareImage(blob);
   });
 
-  document.querySelectorAll(".info-icon").forEach((button) => {
+  elements.journalRecapCopy.addEventListener("click", async () => {
+    const original = elements.journalRecapCopy.textContent;
+    await copyWeeklyRecap();
+    elements.journalRecapCopy.textContent = "Copied";
+    setTimeout(() => {
+      elements.journalRecapCopy.textContent = original;
+    }, 1500);
+  });
+
+  elements.journalRecapDownload.addEventListener("click", async () => {
+    if (!shareCard || !state.weeklySummary) return;
+    const data = getWeeklyShareData(state.weeklySummary);
+    const blob = await shareCard.renderBlob(data);
+    if (blob) downloadShareImage(blob, "fomoff-weekly-recap.png");
+  });
+
+  document.querySelectorAll("[data-info]").forEach((button) => {
     button.addEventListener("click", () => {
       openSheet(button.dataset.info);
     });
@@ -729,8 +883,14 @@
 
   elements.introSkip.addEventListener("click", () => closeIntro(true));
   elements.introReset.addEventListener("click", () => {
+    state.forceIntro = true;
+    if (!isIntroOpen()) startIntro();
     chrome.runtime.sendMessage({ type: "fomoff:update-settings", payload: { hasSeenIntro: false } }, (settings) => {
-      if (settings) updateSettingsUI(settings);
+      if (settings) {
+        updateSettingsUI(settings);
+        return;
+      }
+      if (!isIntroOpen()) startIntro();
     });
   });
 

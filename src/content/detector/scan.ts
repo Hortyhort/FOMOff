@@ -100,6 +100,7 @@
       if (!wrapper) return;
       if (shared.isInsideExtensionUI(wrapper)) return;
       if (shared.hasFomoffIgnore(wrapper)) return;
+      if (shared.isCriticalElement && shared.isCriticalElement(wrapper)) return;
       const text = (wrapper.textContent || "").replace(/\s+/g, " ").trim();
       if (!text) return;
       const matches = countMatches(text, patterns.forcedAddon);

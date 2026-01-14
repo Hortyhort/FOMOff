@@ -1,13 +1,14 @@
 {
   "name": "fomoff",
-  "version": "0.1.3",
+  "version": "0.1.9",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:vite": "vite build",
     "dev": "vite",
-    "test": "node scripts/run-tests.mjs"
+    "test": "node scripts/run-tests.mjs",
+    "verify": "node scripts/no-network-check.mjs && node scripts/run-tests.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.253",

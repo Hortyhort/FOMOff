@@ -3,6 +3,7 @@
 - Use `docs/REVIEWER_CHECKLIST.md` for critical gate checks.
 - Install from `dist/` on chrome://extensions (Developer mode).
 - Verify side panel opens and shows counts on the demo page.
+- Verify toolbar badge count updates with detected totals.
 - Confirm global On/Off disables all treatments.
 - Confirm per-site toggle disables treatments and persists.
 - Confirm trusted site keeps a site untouched after reload.
@@ -19,3 +20,4 @@
 - Export journal JSON and validate contents.
 - Delete all data resets settings and clears journal.
 - Test on pages with fixed overlays for performance.
+- Confirm critical checkout/pricing elements remain untouched.

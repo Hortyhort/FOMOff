@@ -30,6 +30,48 @@
     return !!element.closest("form, button, input, select, textarea, a[href]");
   };
 
+  function normalizeToken(value) {
+    if (!value) return "";
+    return String(value)
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[^a-z0-9]+/gi, " ")
+      .toLowerCase();
+  }
+
+  function hasCriticalKeyword(element) {
+    if (!element || !element.getAttribute) return false;
+    const labelParts = [
+      element.id,
+      element.className,
+      element.getAttribute("aria-label"),
+      element.getAttribute("data-test"),
+      element.getAttribute("data-testid"),
+      element.getAttribute("data-qa")
+    ]
+      .filter(Boolean)
+      .join(" ");
+    if (!labelParts) return false;
+    const normalized = normalizeToken(labelParts);
+    return /(checkout|cart|bag|payment|order|subtotal|total|shipping|tax|price|amount|pay)\b/i.test(
+      normalized
+    );
+  }
+
+  shared.isCriticalElement = function isCriticalElement(element) {
+    if (!element || !element.closest) return false;
+    if (element.closest("[data-fomoff-critical]")) return true;
+    if (element.closest("form, button, input, select, textarea")) return true;
+    if (element.closest("a[href], [role='button'], [role='link'], [role='menuitem']")) return true;
+    let current = element;
+    let depth = 0;
+    while (current && depth < 4) {
+      if (hasCriticalKeyword(current)) return true;
+      current = current.parentElement;
+      depth += 1;
+    }
+    return false;
+  };
+
   shared.isTextHeavy = function isTextHeavy(element, maxLen) {
     if (!element) return false;
     const text = element.textContent || "";

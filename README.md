@@ -7,12 +7,14 @@ FOMOff is a Manifest V3 Chrome extension that mutes manipulative shopping pressu
 - Applies a calm visual treatment (opacity, saturation, weight, subtle badges) instead of deleting content.
 - Offers per-site controls, explainable reasons, and reversible unmute actions.
 - Optional local journal to track daily counts (local-only, exportable JSON).
-- Shareable Reality Check card (PNG) and on-page badges for screenshot-ready clarity.
+- Shareable Reality Check card (PNG), on-page badges, and a live toolbar count.
+- Weekly recap (local-only) for a lightweight retention check-in.
 
 ## How it works
 1. A lightweight content script scans text nodes with curated patterns.
 2. Signals (keyword match, timer-like text, near-purchase proximity, sticky overlays) are scored into Low/Med/High confidence.
-3. Matched elements receive a reversible "Calm Treatment" with a small inline badge.
+3. Safety guards skip critical UI (checkout, pricing, and form controls) before applying treatment.
+4. Matched elements receive a reversible "Calm Treatment" with a small inline badge.
 
 Example detections:
 - "Deal ends in 00:12:03" -> Urgency timer
@@ -46,6 +48,11 @@ npm run build:vite  # Optional Vite build if you switch to bundled entry points
 npm test
 ```
 
+### Verify (no-network + tests)
+```bash
+npm run verify
+```
+
 ## Architecture
 ```
 src/
@@ -67,6 +74,7 @@ Open `demo/index.html` in a browser tab to trigger sample patterns offline.
 - Conservative detection may miss subtle or obfuscated tactics.
 - Content scripts are injected into pages that permit scripting; restricted pages won't be modified.
 - Some inline badges may be suppressed on highly stylized elements.
+- Critical checkout/pricing UI is skipped by design for safety.
 
 ## Privacy
 See `PRIVACY.md` - no tracking, no analytics, no network calls.

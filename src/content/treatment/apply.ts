@@ -18,7 +18,8 @@
   }
 
   function applyTreatment(element, detection, mode) {
-    if (!element) return;
+    if (!element) return false;
+    if (shared.isCriticalElement && shared.isCriticalElement(element)) return false;
     content.ensureStyles();
     element.classList.add("fomoff-muted");
     element.dataset.fomoffMuted = "true";
@@ -36,6 +37,7 @@
     }
 
     content.applyBadge(element, detection);
+    return true;
   }
 
   content.applyTreatment = applyTreatment;

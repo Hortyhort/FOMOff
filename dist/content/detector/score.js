@@ -81,7 +81,7 @@
 
   function scoreElement(element, text, matchData, context) {
     if (!shared.isProbablyVisible(element)) return null;
-    if (shared.isFormOrControl(element)) return null;
+    if (shared.isCriticalElement && shared.isCriticalElement(element)) return null;
     if (shared.hasFomoffIgnore(element)) return null;
 
     const style = getComputedStyle(element);

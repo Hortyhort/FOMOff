@@ -16,6 +16,7 @@ This checklist is intentionally strict. Any Critical blocker is an automatic rej
 - [ ] Confidence levels and "why" reasons are accurate and visible.
 - [ ] Zen mode increases treatment strength but stays non-destructive.
 - [ ] Per-site pause, snooze, and trust behave as labeled.
+- [ ] Safety guard skips critical UI (checkout, pricing, form controls).
 
 ## Side panel UX (10-second comprehension)
 - [ ] Mode labels + microcopy explain Calm vs Zen vs Off without docs.
@@ -24,6 +25,7 @@ This checklist is intentionally strict. Any Critical blocker is an automatic rej
 - [ ] Found (N) tab updates live and default behavior is correct.
 - [ ] New findings dot appears only when count increases.
 - [ ] Onboarding shows once and can be replayed from settings.
+- [ ] Toolbar badge count reflects live totals on the active tab.
 
 ## On-page badges
 - [ ] Badges never shift layout or break UI.

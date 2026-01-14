@@ -63,9 +63,12 @@
     ctx.stroke();
 
     const hostLabel = data.hideHost ? "This site" : data.host || "This site";
+    const headline = data.headline || `Cart ${hostLabel} - Reality Check`;
+    const subhead = data.subhead || "pressure tactics detected";
+    const footer = data.footer || "FOMOff - Reality Check";
     ctx.fillStyle = tokens.colors ? tokens.colors.ink : "#1f2f30";
     ctx.font = tokens.fonts ? tokens.fonts.heading : "600 20px Futura, sans-serif";
-    ctx.fillText(`Cart ${hostLabel} - Reality Check`, 64, 80);
+    ctx.fillText(headline, 64, 80);
 
     ctx.font = "600 64px Futura, sans-serif";
     ctx.fillStyle = tokens.colors ? tokens.colors.teal : "#2b8a8a";
@@ -73,7 +76,7 @@
 
     ctx.font = "400 16px Futura, sans-serif";
     ctx.fillStyle = tokens.colors ? tokens.colors.ink : "#1f2f30";
-    ctx.fillText("pressure tactics detected", 64, 180);
+    ctx.fillText(subhead, 64, 180);
 
     const categoryEntries = Object.entries(data.counts || {})
       .filter(([, count]) => count > 0)
@@ -101,22 +104,24 @@
 
     ctx.fillStyle = tokens.colors ? tokens.colors.ink : "#1f2f30";
     ctx.font = "600 14px Futura, sans-serif";
-    ctx.fillText("Examples (trimmed):", 64, 280);
-
-    ctx.font = "400 13px Futura, sans-serif";
-    ctx.fillStyle = tokens.colors ? tokens.colors.muted : "#5a6b6c";
-    let snippetY = 305;
     const snippets = (data.snippets || []).filter(Boolean).slice(0, 4);
+    if (snippets.length) {
+      ctx.fillText("Examples (trimmed):", 64, 280);
 
-    snippets.forEach((snippet) => {
-      const trimmed = snippet.length > 96 ? `${snippet.slice(0, 93)}...` : snippet;
-      drawWrappedText(ctx, `"${trimmed}"`, 64, snippetY, 760, 18, 2);
-      snippetY += 36;
-    });
+      ctx.font = "400 13px Futura, sans-serif";
+      ctx.fillStyle = tokens.colors ? tokens.colors.muted : "#5a6b6c";
+      let snippetY = 305;
+
+      snippets.forEach((snippet) => {
+        const trimmed = snippet.length > 96 ? `${snippet.slice(0, 93)}...` : snippet;
+        drawWrappedText(ctx, `"${trimmed}"`, 64, snippetY, 760, 18, 2);
+        snippetY += 36;
+      });
+    }
 
     ctx.fillStyle = tokens.colors ? tokens.colors.muted : "#5a6b6c";
     ctx.font = tokens.fonts ? tokens.fonts.small : "400 11px Futura, sans-serif";
-    ctx.fillText("FOMOff - Reality Check", 64, height - 64);
+    ctx.fillText(footer, 64, height - 64);
 
     ctx.strokeStyle = tokens.colors ? tokens.colors.teal : "#2b8a8a";
     ctx.lineWidth = 2;

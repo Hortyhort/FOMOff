@@ -21,7 +21,8 @@
     falsePositives: new Set(),
     inspector: null,
     onPick: null,
-    snoozeTimer: null
+    snoozeTimer: null,
+    previewTimers: new Map()
   };
 
   content.state = state;
@@ -122,7 +123,8 @@
       const snippet = shared.getTextSnippet(element, 160);
       const signature = buildSignature(state.host, detection, snippet);
       if (state.falsePositives.has(signature)) return;
-      content.applyTreatment(element, detection, state.mode);
+      const applied = content.applyTreatment(element, detection, state.mode);
+      if (!applied) return;
       const record = addRecord(element, detection, snippet);
       if (state.showBadges && content.badges) {
         content.badges.addBadge(element, record);
@@ -259,11 +261,13 @@
         }
         entry.record.muted = false;
       } else if (entry) {
-        content.applyTreatment(element, entry.record, state.mode);
-        if (state.showBadges && content.badges) {
-          content.badges.addBadge(element, entry.record);
+        const applied = content.applyTreatment(element, entry.record, state.mode);
+        if (applied) {
+          if (state.showBadges && content.badges) {
+            content.badges.addBadge(element, entry.record);
+          }
+          entry.record.muted = true;
         }
-        entry.record.muted = true;
       }
       notifyUpdate();
       return;
@@ -275,7 +279,8 @@
       score: 100,
       reasons: ["user muted"]
     };
-    content.applyTreatment(element, detection, state.mode);
+    const applied = content.applyTreatment(element, detection, state.mode);
+    if (!applied) return;
     element.dataset.fomoffManual = "true";
     const record = addRecord(element, detection, shared.getTextSnippet(element, 120));
     if (state.showBadges && content.badges) {
@@ -299,16 +304,50 @@
   function previewToggle(id) {
     const entry = state.records.get(id);
     if (!entry) return;
-    if (entry.record.muted) {
+    if (state.previewTimers.has(id)) {
+      clearTimeout(state.previewTimers.get(id));
+      state.previewTimers.delete(id);
+    }
+    const wasMuted = entry.record.muted;
+    if (wasMuted) {
       unmuteById(id);
     } else {
-      content.applyTreatment(entry.element, entry.record, state.mode);
-      if (state.showBadges && content.badges) {
-        content.badges.addBadge(entry.element, entry.record);
+      const applied = content.applyTreatment(entry.element, entry.record, state.mode);
+      if (applied) {
+        if (state.showBadges && content.badges) {
+          content.badges.addBadge(entry.element, entry.record);
+        }
+        entry.record.muted = true;
+      } else {
+        entry.record.muted = false;
       }
-      entry.record.muted = true;
       notifyUpdate();
     }
+    const timer = setTimeout(() => {
+      state.previewTimers.delete(id);
+      const current = state.records.get(id);
+      if (!current) return;
+      if (wasMuted) {
+        const applied = content.applyTreatment(current.element, current.record, state.mode);
+        if (applied) {
+          if (state.showBadges && content.badges) {
+            content.badges.addBadge(current.element, current.record);
+          }
+          current.record.muted = true;
+        } else {
+          current.record.muted = false;
+        }
+      } else {
+        content.removeBadge(current.element);
+        content.restoreElement(current.element);
+        if (content.badges) {
+          content.badges.removeBadge(id);
+        }
+        current.record.muted = false;
+      }
+      notifyUpdate();
+    }, 1500);
+    state.previewTimers.set(id, timer);
   }
 
   function reportFalsePositive(id) {

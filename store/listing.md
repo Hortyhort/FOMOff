@@ -13,9 +13,11 @@ Highlights:
 - Real-time detection with explainable reasons and confidence levels.
 - Reversible calming treatment - no broken checkout flows.
 - Per-site controls, trusted sites, and element-level unmute.
+- Safety guard skips checkout controls and price elements by default.
+- Live toolbar count so the impact is visible instantly.
 - Shareable Reality Check card (PNG) for receipts you can screenshot.
 - On-page badges that explain what got dimmed, without blocking clicks.
-- Optional local journal of tactics encountered (exportable JSON).
+- Optional local journal of tactics encountered (exportable JSON) plus a weekly recap.
 - 100% offline, no tracking, no analytics, no remote config.
 
 ## Permissions justification
@@ -32,4 +34,4 @@ Highlights:
 2. "Muted scarcity banner with on-page badge."
 3. "Shareable Reality Check card for quick receipts."
 4. "Zen Shopping mode softly demotes an interrupting overlay."
-5. "Trusted site controls and local journal."
+5. "Trusted site controls with a weekly recap."

@@ -284,6 +284,13 @@ body {
   color: var(--muted);
 }
 
+.summary-note {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .summary-groups {
   display: grid;
   gap: 10px;
@@ -424,6 +431,16 @@ body {
   animation: shieldPulse 600ms ease;
 }
 
+.share-quick {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.share-quick .button.primary {
+  flex: 1;
+}
+
 .share-block {
   display: grid;
   gap: 10px;
@@ -508,6 +525,41 @@ body {
   flex-wrap: wrap;
 }
 
+.journal-recap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #d8c9b8;
+  background: #fff7ef;
+}
+
+.journal-recap-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.journal-recap-count {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.journal-recap-sub {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.journal-recap-actions {
+  display: grid;
+  gap: 6px;
+}
+
 .journal-list {
   display: grid;
   gap: 8px;
@@ -546,6 +598,10 @@ body {
   z-index: 9999;
 }
 
+.sheet[hidden] {
+  display: none !important;
+}
+
 .sheet-card {
   width: 100%;
   background: #ffffff;
@@ -582,10 +638,15 @@ body {
   z-index: 10000;
 }
 
+.intro[hidden] {
+  display: none !important;
+}
+
 .intro-backdrop {
   position: absolute;
   inset: 0;
   background: rgba(24, 32, 33, 0.4);
+  pointer-events: none;
 }
 
 .intro-highlight {
@@ -607,6 +668,7 @@ body {
   box-shadow: 0 12px 26px rgba(24, 32, 33, 0.24);
   display: grid;
   gap: 8px;
+  pointer-events: auto;
 }
 
 .intro-step {
