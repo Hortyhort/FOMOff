@@ -84,7 +84,7 @@
       title: "Modes",
       items: [
         "Calm: gently de-emphasizes pressure cues without breaking pages.",
-        "Zen Shopping: stronger de-emphasis; may reduce nag overlays when safe.",
+        "Zen Shopping: stronger dimming for popups, timers, and urgency cues (still reversible).",
         "Off: disables treatment for this site."
       ]
     },
@@ -181,7 +181,8 @@
     if (mode === shared.MODES.CALM) {
       elements.modeNote.textContent = "Recommended - gentle dimming, minimal risk.";
     } else if (mode === shared.MODES.ZEN) {
-      elements.modeNote.textContent = "Stronger calming for shopping pages (still reversible).";
+      elements.modeNote.textContent =
+        "Stronger dimming for popups, timers, and urgency cues. Always reversible.";
     } else {
       elements.modeNote.textContent = "No page changes on this site.";
     }
@@ -328,7 +329,7 @@
     },
     {
       title: "Start with Calm.",
-      text: "Use Zen for stronger shopping pages. You can always undo.",
+      text: "Switch to Zen when a page gets noisy - stronger dimming for popups, timers, and urgency cues. Always reversible.",
       targets: ["#mode-section"]
     },
     {

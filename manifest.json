@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "FOMOff",
   "description": "Mute manipulative shopping pressure tactics in real time.",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "action": {
     "default_title": "FOMOff",
     "default_icon": {
@@ -21,8 +21,16 @@
   "background": {
     "service_worker": "background/service_worker.js"
   },
-  "permissions": ["scripting", "storage", "tabs", "contextMenus", "sidePanel"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "scripting",
+    "storage",
+    "tabs",
+    "contextMenus",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "options_page": "ui/options/index.html",
   "side_panel": {
     "default_path": "ui/sidepanel/index.html"

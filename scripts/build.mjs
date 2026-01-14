@@ -4,6 +4,8 @@ import path from "path";
 const root = process.cwd();
 const srcDir = path.join(root, "src");
 const distDir = path.join(root, "dist");
+const manifestPath = path.join(root, "manifest.json");
+const packagePath = path.join(root, "package.json");
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -41,9 +43,39 @@ function copyTree(current) {
   });
 }
 
+function parseVersion(value) {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(value || "");
+  if (!match) {
+    throw new Error(`Invalid version format: ${value}`);
+  }
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3])
+  };
+}
+
+function bumpPatch(version) {
+  const parts = parseVersion(version);
+  return `${parts.major}.${parts.minor}.${parts.patch + 1}`;
+}
+
+function bumpVersion() {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  const sourceVersion = pkg.version || manifest.version;
+  const nextVersion = bumpPatch(sourceVersion);
+  pkg.version = nextVersion;
+  manifest.version = nextVersion;
+  fs.writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  return nextVersion;
+}
+
+const nextVersion = bumpVersion();
 ensureDir(distDir);
 copyTree(srcDir);
-copyFile(path.join(root, "manifest.json"), path.join(distDir, "manifest.json"));
+copyFile(manifestPath, path.join(distDir, "manifest.json"));
 copyFile(path.join(root, "PRIVACY.md"), path.join(distDir, "PRIVACY.md"));
 
 const assetsDir = path.join(root, "assets");
@@ -55,4 +87,4 @@ if (fs.existsSync(assetsDir)) {
   });
 }
 
-console.log("FOMOff build complete.");
+console.log(`FOMOff build complete. Version ${nextVersion}.`);
