@@ -1,438 +1,120 @@
+/**
+ * FOMOff v2.0 — "Breath Mode" Side Panel
+ * Anti-dashboard. Anti-manipulation. Pro-calm.
+ *
+ * Architecture:
+ * - Level 0: Breathing orb (default view)
+ * - Level 1: Summary + Share hero (tap orb)
+ * - Level 2: Detection receipt (tap "show details")
+ * - Settings: Bottom sheet drawer
+ */
 (function () {
   const shared = globalThis.FOMOff.shared;
   const shareCard = globalThis.FOMOffShare;
 
-  const elements = {
-    globalToggle: document.getElementById("global-toggle"),
-    siteHost: document.getElementById("site-host"),
-    siteStatus: document.getElementById("site-status"),
-    siteToggle: document.getElementById("site-toggle"),
-    siteAllow: document.getElementById("site-allow"),
-    badgesToggle: document.getElementById("badges-toggle"),
-    totalCount: document.getElementById("total-count"),
-    foundCount: document.getElementById("found-count"),
-    foundDot: document.getElementById("found-dot"),
-    summaryGroups: document.getElementById("summary-groups"),
-    summarySection: document.getElementById("summary-section"),
-    summaryNote: document.getElementById("summary-note"),
-    modeNote: document.getElementById("mode-note"),
-    detectionsList: document.getElementById("detections-list"),
-    cleanState: document.getElementById("clean-state"),
-    shareQuick: document.getElementById("share-quick"),
-    shareQuickCopy: document.getElementById("share-quick-copy"),
-    shareQuickOptions: document.getElementById("share-quick-options"),
-    shareBlock: document.getElementById("share-block"),
-    sharePanel: document.getElementById("share-panel"),
-    sharePreview: document.getElementById("share-preview"),
-    shareHideSite: document.getElementById("share-hide-site"),
-    shareCopy: document.getElementById("share-copy"),
-    shareDownload: document.getElementById("share-download"),
-    infoSheet: document.getElementById("info-sheet"),
-    sheetTitle: document.getElementById("sheet-title"),
-    sheetBody: document.getElementById("sheet-body"),
-    sheetClose: document.getElementById("sheet-close"),
-    introBanner: document.getElementById("intro-banner"),
-    introDismiss: document.getElementById("intro-dismiss"),
-    tabs: Array.from(document.querySelectorAll(".tab")),
-    detectionsTab: document.getElementById("detections-tab"),
-    journalTab: document.getElementById("journal-tab"),
-    journalList: document.getElementById("journal-list"),
-    journalToggle: document.getElementById("journal-toggle"),
-    journalRetention: document.getElementById("journal-retention"),
-    exportJournal: document.getElementById("export-journal"),
-    deleteAll: document.getElementById("delete-all")
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DOM References
+  // ═══════════════════════════════════════════════════════════════════════════
+  const $ = (id: string) => document.getElementById(id);
+
+  const dom = {
+    // Screen reader
+    srAnnouncer: $("sr-announcer"),
+
+    // Orb (Level 0)
+    orbContainer: $("orb-container"),
+    orb: $("orb"),
+    orbLabel: $("orb-label"),
+    orbSublabel: $("orb-sublabel"),
+
+    // Level 1
+    level1: $("level-1"),
+    shareHero: $("share-hero"),
+    sharePreview: $("share-preview"),
+    btnCopyShare: $("btn-copy-share"),
+    btnDownloadShare: $("btn-download-share"),
+    btnShowDetails: $("btn-show-details"),
+    cleanState: $("clean-state"),
+    summarySection: $("summary-section"),
+    summaryPills: $("summary-pills"),
+    siteControl: $("site-control"),
+    siteHost: $("site-host"),
+    siteActive: $("site-active"),
+    siteTrusted: $("site-trusted"),
+
+    // Level 2
+    level2: $("level-2"),
+    receiptTotal: $("receipt-total"),
+    receiptList: $("receipt-list"),
+    tipSwipe: $("tip-swipe"),
+    tipSwipeDismiss: $("tip-swipe-dismiss"),
+    btnBackToSummary: $("btn-back-to-summary"),
+
+    // Settings sheet
+    btnSettings: $("btn-settings"),
+    sheetBackdrop: $("sheet-backdrop"),
+    settingsSheet: $("settings-sheet"),
+    btnCloseSettings: $("btn-close-settings"),
+    toggleBadges: $("toggle-badges"),
+    toggleJournal: $("toggle-journal"),
+    btnExport: $("btn-export"),
+    btnReset: $("btn-reset"),
+
+    // Intro
+    introOverlay: $("intro-overlay"),
+    btnTryDemo: $("btn-try-demo"),
+    btnSkipIntro: $("btn-skip-intro"),
+
+    // Toast
+    toast: $("toast"),
+    toastMessage: $("toast-message"),
+    toastUndo: $("toast-undo")
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // State
+  // ═══════════════════════════════════════════════════════════════════════════
   const state = {
-    tabId: null,
+    tabId: null as number | null,
     host: "",
-    settings: null,
-    lastPayload: null,
-    lastTotal: 0,
-    cleanPulseShown: false,
-    shareOpen: false,
-    newFindings: false,
-    tabInitialized: false
-  };
-
-  const GROUPS = [
-    {
-      id: "high",
-      title: "High pressure",
-      categories: [shared.CATEGORIES.URGENCY, shared.CATEGORIES.SCARCITY]
-    },
-    {
-      id: "social",
-      title: "Social manipulation",
-      categories: [shared.CATEGORIES.SOCIAL_PROOF, shared.CATEGORIES.FAKE_CHAT]
-    },
-    {
-      id: "friction",
-      title: "Friction tricks",
-      categories: [shared.CATEGORIES.NAG_OVERLAY, shared.CATEGORIES.FORCED_ADDON]
-    }
-  ];
-
-  const INFO_CONTENT = {
-    mode: {
-      title: "Modes",
-      items: [
-        "Calm: gently de-emphasizes pressure cues without breaking pages.",
-        "Off: disables treatment for this site."
-      ]
-    },
-    badges: {
-      title: "Badges",
-      items: [
-        "We place small callouts near detected pressure tactics.",
-        "They never block clicks and can be hidden per item or per site."
-      ]
-    },
-    site: {
-      title: "Site controls",
-      items: [
-        "Pause: stop treatments on this site until you resume.",
-        "Trust: keep this site untouched until you remove trust."
-      ]
-    },
-    permissions: {
-      title: "Why we need access",
-      items: [
-        "We read the page to detect pressure tactics and dim them in place.",
-        "All processing stays on your device - nothing leaves the browser.",
-        "We never use external servers or analytics."
-      ]
+    settings: null as any,
+    payload: null as any,
+    level: 0, // 0 = orb, 1 = summary, 2 = receipt
+    lastUndo: null as (() => void) | null,
+    toastTimeout: null as number | null,
+    coachingShown: {
+      swipe: false
     }
   };
 
-  const SUMMARY_PHRASES = {
-    [shared.CATEGORIES.URGENCY]: "urgency cues",
-    [shared.CATEGORIES.SCARCITY]: "scarcity cues",
-    [shared.CATEGORIES.SOCIAL_PROOF]: "social proof nudges",
-    [shared.CATEGORIES.FAKE_CHAT]: "fake chat prompts",
-    [shared.CATEGORIES.NAG_OVERLAY]: "interrupting overlays",
-    [shared.CATEGORIES.FORCED_ADDON]: "pre-checked add-ons",
-    [shared.CATEGORIES.MANUAL]: "manual mutes"
-  };
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Utilities
+  // ═══════════════════════════════════════════════════════════════════════════
+  function haptic() {
+    if (navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+  }
 
-  function getTotal(payload) {
+  function announce(message: string) {
+    if (dom.srAnnouncer) {
+      dom.srAnnouncer.textContent = message;
+    }
+  }
+
+  function getTotal(payload: any): number {
     if (!payload) return 0;
-    const value = payload.total;
-    const total = Number(value);
+    const total = Number(payload.total);
     return Number.isFinite(total) ? total : 0;
   }
 
-  function openSheet(key) {
-    const info = INFO_CONTENT[key];
-    if (!info) return;
-    elements.sheetTitle.textContent = info.title;
-    elements.sheetBody.innerHTML = "";
-    info.items.forEach((item) => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      elements.sheetBody.appendChild(li);
-    });
-    elements.infoSheet.hidden = false;
-    elements.infoSheet.style.display = "flex";
-    elements.sheetClose.focus();
-  }
-
-  function isIntroBannerVisible() {
-    return !elements.introBanner.hidden;
-  }
-
-  function closeSheet() {
-    elements.infoSheet.hidden = true;
-    elements.infoSheet.style.display = "none";
-  }
-
-  // Use shared getSiteStatus
-  function getSiteStatus(settings) {
-    return shared.getSiteStatus(settings, state.host);
-  }
-
-  function updateSiteUI(settings) {
-    const status = getSiteStatus(settings);
-    elements.siteHost.textContent = state.host || "(no site)";
-
-    if (status.allowlisted) {
-      elements.siteStatus.textContent = "Trusted site - we'll stay quiet here.";
-    } else {
-      elements.siteStatus.textContent = status.siteEnabled
-        ? "Active and watching for pressure."
-        : "Paused on this site.";
-    }
-
-    elements.siteToggle.textContent = status.siteEnabled ? "Pause on this site" : "Resume on this site";
-    elements.siteAllow.textContent = status.allowlisted ? "Remove trust" : "Trust this site";
-    elements.siteToggle.hidden = status.allowlisted;
-    elements.siteAllow.hidden = false;
-  }
-
-  function updateModeUI(mode) {
-    document.querySelectorAll(".mode").forEach((button) => {
-      const isActive = button.dataset.mode === mode;
-      button.classList.toggle("active", isActive);
-      button.setAttribute("aria-pressed", String(isActive));
-    });
-    if (mode === shared.MODES.CALM) {
-      elements.modeNote.textContent = "Recommended - gentle dimming, minimal risk.";
-    } else {
-      elements.modeNote.textContent = "No page changes on this site.";
-    }
-  }
-
-  function getSummaryLine(counts) {
-    const entries = Object.entries(counts || {})
-      .filter(([, count]) => count > 0)
-      .sort((a, b) => b[1] - a[1]);
-    if (!entries.length) return "";
-    const labels = entries.slice(0, 2).map(([category]) => SUMMARY_PHRASES[category] || category.toLowerCase());
-    const line = labels.length === 1 ? labels[0] : `${labels[0]} and ${labels[1]}`;
-    if (entries.length > 2) {
-      return `We dimmed ${line} and more.`;
-    }
-    return `We dimmed ${line}.`;
-  }
-
-  function renderSummaryGroups(counts) {
-    elements.summaryGroups.innerHTML = "";
-
-    GROUPS.forEach((group) => {
-      const total = group.categories.reduce((sum, category) => sum + (counts[category] || 0), 0);
-      if (total === 0) return;
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "summary-group";
-
-      const title = document.createElement("div");
-      title.className = "summary-group-title";
-      title.textContent = group.title;
-
-      const pills = document.createElement("div");
-      pills.className = "summary-pills";
-
-      group.categories.forEach((category) => {
-        const count = counts[category] || 0;
-        const pill = document.createElement("div");
-        pill.className = "summary-pill";
-        if (count > 0) pill.classList.add("active");
-        pill.innerHTML = `<strong>${count}</strong>${shared.CATEGORY_LABELS[category]}`;
-        pills.appendChild(pill);
-      });
-
-      wrapper.appendChild(title);
-      wrapper.appendChild(pills);
-      elements.summaryGroups.appendChild(wrapper);
-    });
-  }
-
-  function renderDetections(items) {
-    elements.detectionsList.innerHTML = "";
-    if (!items.length) {
-      elements.detectionsList.hidden = true;
-      return;
-    }
-    elements.detectionsList.hidden = false;
-    items.forEach((item) => {
-      const entry = globalThis.FOMOffPanel.renderItem(item);
-      elements.detectionsList.appendChild(entry);
-    });
-  }
-
-  function animateTick(element) {
-    element.classList.remove("tick");
-    requestAnimationFrame(() => {
-      element.classList.add("tick");
-      setTimeout(() => element.classList.remove("tick"), 200);
-    });
-  }
-
-  function updateCounts(payload) {
-    const total = getTotal(payload);
-    elements.totalCount.textContent = total;
-    elements.foundCount.textContent = total;
-    if (total > state.lastTotal) {
-      animateTick(elements.totalCount);
-      animateTick(elements.foundCount);
-      elements.foundDot.hidden = false;
-      state.newFindings = true;
-      if (!elements.detectionsTab.hidden) {
-        setTimeout(() => {
-          if (!elements.detectionsTab.hidden) {
-            elements.foundDot.hidden = true;
-            state.newFindings = false;
-          }
-        }, 1500);
-      }
-    }
-    state.lastTotal = total;
-  }
-
-  function updateCleanState(payload) {
-    const total = getTotal(payload);
-    elements.cleanState.hidden = total !== 0;
-    if (total > 0) {
-      state.cleanPulseShown = false;
-    }
-    if (total === 0 && !state.cleanPulseShown) {
-      elements.cleanState.classList.add("pulse");
-      state.cleanPulseShown = true;
-      setTimeout(() => elements.cleanState.classList.remove("pulse"), 700);
-    }
-  }
-
-  function updateSummary(payload) {
-    const total = getTotal(payload);
-    elements.summarySection.classList.toggle("clean", total === 0);
-    if (total === 0) {
-      elements.summaryGroups.innerHTML = "";
-      elements.summaryNote.hidden = true;
-      return;
-    }
-    const summaryLine = getSummaryLine(payload.counts || {});
-    elements.summaryNote.textContent = summaryLine;
-    elements.summaryNote.hidden = !summaryLine;
-    renderSummaryGroups(payload.counts || {});
-  }
-
-  function getShareData(payload) {
-    const items = (payload.items || []).slice(0, 4).map((item) => item.snippet || "");
-    return {
-      host: state.host,
-      total: payload.total || 0,
-      counts: payload.counts || {},
-      snippets: items
-    };
-  }
-
-  function renderSharePreview(payload) {
-    if (!shareCard || !payload) return;
-    const data = getShareData(payload);
-    data.hideHost = elements.shareHideSite.checked;
-    const dataUrl = shareCard.renderDataUrl(data);
-    elements.sharePreview.innerHTML = "";
-    const img = document.createElement("img");
-    img.src = dataUrl;
-    img.alt = "Reality check card preview";
-    elements.sharePreview.appendChild(img);
-  }
-
-  function updateShareSection(payload) {
-    const total = getTotal(payload);
-    elements.shareQuick.hidden = total <= 0;
-    elements.shareBlock.hidden = total <= 0;
-    elements.shareBlock.style.display = total <= 0 ? "none" : "grid";
-    if (total <= 0) {
-      elements.sharePanel.hidden = true;
-      state.shareOpen = false;
-      elements.shareQuickOptions.textContent = "More options";
-      return;
-    }
-    elements.shareQuickOptions.textContent = state.shareOpen ? "Hide options" : "More options";
-    if (state.shareOpen) {
-      renderSharePreview(payload);
-    }
-  }
-
-  function showIntroBanner() {
-    elements.introBanner.hidden = false;
-  }
-
-  function hideIntroBanner() {
-    elements.introBanner.hidden = true;
-    chrome.runtime.sendMessage({ type: "fomoff:update-settings", payload: { hasSeenIntro: true } });
-  }
-
-  async function copyShareImage() {
-    if (!shareCard || !state.lastPayload) return;
-    const data = getShareData(state.lastPayload);
-    data.hideHost = elements.shareHideSite.checked;
-    const blob = await shareCard.renderBlob(data);
-    if (!blob) return;
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        return;
-      } catch (error) {
-        // Fallback to download below.
-      }
-    }
-    downloadShareImage(blob);
-  }
-
-  function downloadShareImage(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename || "fomoff-reality-check.png";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }
-
-  function updateFromPayload(payload) {
-    if (!payload) return;
-    state.lastPayload = payload;
-    if (!state.tabInitialized && getTotal(payload) > 0) {
-      setActiveTab("detections");
-      state.tabInitialized = true;
-    }
-    updateCounts(payload);
-    updateSummary(payload);
-    renderDetections(payload.items || []);
-    updateCleanState(payload);
-    updateShareSection(payload);
-  }
-
-  function updateSettingsUI(settings) {
-    state.settings = settings;
-    elements.globalToggle.checked = settings.enabled;
-    elements.badgesToggle.checked = settings.showBadges !== false;
-    updateSiteUI(settings);
-    updateModeUI(settings.mode);
-    elements.journalToggle.checked = settings.journalingEnabled;
-    elements.journalRetention.value = String(settings.journalRetentionDays || 30);
-    if (!settings.hasSeenIntro && !isIntroBannerVisible()) {
-      showIntroBanner();
-    }
-  }
-
-  function requestState() {
-    if (!state.tabId) return;
-    chrome.tabs.sendMessage(
-      state.tabId,
-      { type: "fomoff:get-state" },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          updateFromPayload({ total: 0, counts: {}, items: [] });
-          return;
-        }
-        updateFromPayload(response);
-      }
-    );
-  }
-
-  function refreshSettings() {
-    chrome.runtime.sendMessage({ type: "fomoff:get-settings" }, (settings) => {
-      if (settings) {
-        updateSettingsUI(settings);
-        return;
-      }
-      chrome.storage.local.get(["settings"], (result) => {
-        updateSettingsUI(shared.mergeSettings(result.settings));
-      });
-    });
-  }
-
-  // Helper to safely send messages without "Unchecked runtime.lastError" warnings
-  function safeSendMessage(tabId, message, callback) {
+  function safeSend(tabId: number | null, message: any, callback?: (r: any) => void) {
     if (!tabId) {
       if (callback) callback(null);
       return;
     }
     chrome.tabs.sendMessage(tabId, message, (response) => {
       if (chrome.runtime.lastError) {
-        // Silently ignore - tab may be an error page or restricted URL
         if (callback) callback(null);
         return;
       }
@@ -440,260 +122,639 @@
     });
   }
 
-  function sendEnabledToTab() {
-    const status = getSiteStatus(state.settings);
-    const enabled = state.settings.enabled && status.siteEnabled && status.mode !== shared.MODES.OFF;
-    safeSendMessage(state.tabId, { type: "fomoff:set-enabled", enabled });
-    safeSendMessage(state.tabId, { type: "fomoff:set-mode", mode: status.mode });
-  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Navigation (Level Management)
+  // ═══════════════════════════════════════════════════════════════════════════
+  function showLevel(level: number) {
+    state.level = level;
 
-  function handleActions(event) {
-    const button = event.target.closest("button[data-action]");
-    if (!button) return;
-    const item = button.closest(".item");
-    if (!item) return;
-    const id = item.dataset.id;
-    if (!id) return;
+    // Hide all levels
+    dom.level1!.hidden = true;
+    dom.level2!.hidden = true;
 
-    if (button.dataset.action === "unmute") {
-      safeSendMessage(state.tabId, { type: "fomoff:unmute", id });
-    }
-    if (button.dataset.action === "preview") {
-      safeSendMessage(state.tabId, { type: "fomoff:preview", id });
-    }
-    if (button.dataset.action === "false-positive") {
-      safeSendMessage(state.tabId, { type: "fomoff:report-false-positive", id });
-    }
-    if (button.dataset.action === "allow-site") {
-      chrome.runtime.sendMessage({ type: "fomoff:allow-site", host: state.host }, (settings) => {
-        updateSettingsUI(settings);
-        sendEnabledToTab();
-      });
+    // Orb always visible, but changes based on level
+    dom.orbContainer!.hidden = false;
+
+    if (level === 0) {
+      // Just the orb
+      dom.orbContainer!.style.minHeight = "180px";
+    } else if (level === 1) {
+      // Orb compressed + summary
+      dom.orbContainer!.style.minHeight = "120px";
+      dom.level1!.hidden = false;
+    } else if (level === 2) {
+      // Hide orb entirely, show receipt
+      dom.orbContainer!.hidden = true;
+      dom.level2!.hidden = false;
     }
   }
 
-  function handleModeClick(event) {
-    const button = event.target.closest(".mode");
-    if (!button) return;
-    const mode = button.dataset.mode;
-    chrome.runtime.sendMessage({ type: "fomoff:set-mode", mode }, () => {
-      refreshSettings();
-      sendEnabledToTab();
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Orb State
+  // ═══════════════════════════════════════════════════════════════════════════
+  function updateOrb(payload: any) {
+    const total = getTotal(payload);
+    const orb = dom.orb!;
+    const label = dom.orbLabel!;
+    const sublabel = dom.orbSublabel!;
+
+    // Remove all state classes
+    orb.classList.remove("active", "clean");
+
+    if (total === 0) {
+      // Clean state
+      orb.classList.add("clean");
+      label.textContent = "All clear";
+      sublabel.textContent = "No pressure tactics found";
+      document.body.className = "state-clean";
+    } else if (total <= 3) {
+      // Calm state (few tactics)
+      orb.classList.add("active");
+      label.textContent = `${total} dimmed`;
+      sublabel.textContent = total === 1 ? "pressure tactic" : "pressure tactics";
+      document.body.className = "state-calm";
+    } else {
+      // Warn state (many tactics)
+      orb.classList.add("active");
+      label.textContent = `${total} dimmed`;
+      sublabel.textContent = "This site uses pressure tactics";
+      document.body.className = "state-warn";
+    }
+
+    announce(`${total} pressure tactics ${total === 0 ? "found" : "dimmed"} on this page`);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Summary Pills
+  // ═══════════════════════════════════════════════════════════════════════════
+  const CATEGORY_LABELS: Record<string, string> = {
+    [shared.CATEGORIES.URGENCY]: "Urgency",
+    [shared.CATEGORIES.SCARCITY]: "Scarcity",
+    [shared.CATEGORIES.SOCIAL_PROOF]: "Social proof",
+    [shared.CATEGORIES.FAKE_CHAT]: "Fake chat",
+    [shared.CATEGORIES.NAG_OVERLAY]: "Overlays",
+    [shared.CATEGORIES.FORCED_ADDON]: "Add-ons"
+  };
+
+  function renderSummaryPills(counts: Record<string, number>) {
+    const container = dom.summaryPills!;
+    container.innerHTML = "";
+
+    const entries = Object.entries(counts || {})
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1]);
+
+    if (entries.length === 0) {
+      dom.summarySection!.hidden = true;
+      return;
+    }
+
+    dom.summarySection!.hidden = false;
+
+    entries.forEach(([category, count]) => {
+      const pill = document.createElement("div");
+      pill.className = "pill active";
+      pill.innerHTML = `<span class="pill-count">${count}</span> ${CATEGORY_LABELS[category] || category}`;
+      container.appendChild(pill);
     });
   }
 
-  function setActiveTab(tabName) {
-    elements.tabs.forEach((tab) => {
-      const isActive = tab.dataset.tab === tabName;
-      tab.classList.toggle("active", isActive);
-      tab.setAttribute("aria-selected", String(isActive));
-      tab.tabIndex = isActive ? 0 : -1;
-    });
-    elements.detectionsTab.hidden = tabName !== "detections";
-    elements.journalTab.hidden = tabName !== "journal";
-    if (tabName === "journal") {
-      loadJournal();
-    }
-    if (tabName === "detections") {
-      elements.foundDot.hidden = true;
-      state.newFindings = false;
-    }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Share Card
+  // ═══════════════════════════════════════════════════════════════════════════
+  function getShareData(payload: any) {
+    const items = (payload?.items || []).slice(0, 4).map((item: any) => item.snippet || "");
+    return {
+      host: state.host,
+      total: payload?.total || 0,
+      counts: payload?.counts || {},
+      snippets: items,
+      hideHost: false
+    };
   }
 
-  function handleTabSwitch(event) {
-    const button = event.target.closest(".tab");
-    if (!button) return;
-    setActiveTab(button.dataset.tab);
+  function renderSharePreview(payload: any) {
+    if (!shareCard || !payload || getTotal(payload) === 0) {
+      dom.shareHero!.hidden = true;
+      return;
+    }
+
+    dom.shareHero!.hidden = false;
+    const data = getShareData(payload);
+    const dataUrl = shareCard.renderDataUrl(data);
+
+    dom.sharePreview!.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.alt = "Reality check card preview";
+    dom.sharePreview!.appendChild(img);
   }
 
-  function loadJournal() {
-    chrome.runtime.sendMessage({ type: "fomoff:get-journal" }, (journal) => {
-      elements.journalList.innerHTML = "";
-      const entries = Object.entries(journal || {}).sort((a, b) => (a[0] < b[0] ? 1 : -1));
-      if (!entries.length) {
-        const empty = document.createElement("div");
-        empty.className = "site-status";
-        empty.textContent = "No journal entries yet.";
-        elements.journalList.appendChild(empty);
+  async function copyShareImage() {
+    if (!shareCard || !state.payload) return;
+    const data = getShareData(state.payload);
+
+    try {
+      const blob = await shareCard.renderBlob(data);
+      if (!blob) return;
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        showToast("Image copied!", null);
+        haptic();
         return;
       }
-      entries.forEach(([date, entry]) => {
-        const row = document.createElement("div");
-        row.className = "journal-row";
-        row.innerHTML = `<span>${date}</span><span>${entry.total}</span>`;
-        elements.journalList.appendChild(row);
+    } catch (e) {
+      // Fallback to download
+    }
+
+    downloadShareImage();
+  }
+
+  async function downloadShareImage() {
+    if (!shareCard || !state.payload) return;
+    const data = getShareData(state.payload);
+    const blob = await shareCard.renderBlob(data);
+    if (!blob) return;
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `fomoff-${state.host || "site"}.png`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    haptic();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Receipt (Detection List)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const CONFIDENCE_ICONS: Record<string, string> = {
+    high: "⚠",
+    medium: "ℹ",
+    low: "·"
+  };
+
+  function renderReceipt(items: any[]) {
+    const container = dom.receiptList!;
+    container.innerHTML = "";
+
+    dom.receiptTotal!.textContent = `${items.length} ${items.length === 1 ? "item" : "items"}`;
+
+    if (items.length === 0) {
+      container.innerHTML = '<div class="text-muted" style="text-align: center; padding: 24px;">No items yet</div>';
+      return;
+    }
+
+    // Show coaching tip on first view
+    if (!state.coachingShown.swipe && items.length > 0) {
+      dom.tipSwipe!.hidden = false;
+    }
+
+    items.forEach((item, index) => {
+      const card = document.createElement("div");
+      card.className = "item";
+      card.dataset.id = item.id;
+      card.dataset.index = String(index);
+
+      const confidence = (item.confidence || "medium").toLowerCase();
+      const category = CATEGORY_LABELS[item.category] || item.category || "Unknown";
+
+      card.innerHTML = `
+        <div class="item-row">
+          <span class="item-category">${category}</span>
+          <span class="item-confidence ${confidence}">
+            <span class="item-confidence-icon">${CONFIDENCE_ICONS[confidence] || "·"}</span>
+            ${confidence}
+          </span>
+        </div>
+        <div class="item-snippet">"${item.snippet || "..."}"</div>
+        <div class="item-actions">
+          <button class="btn-ghost" data-action="unmute">Unmute</button>
+          <button class="btn-ghost" data-action="preview">Show on page</button>
+        </div>
+        <span class="item-swipe-hint">← swipe to unmute</span>
+      `;
+
+      // Swipe handling
+      setupSwipeToUnmute(card, item.id);
+
+      container.appendChild(card);
+    });
+  }
+
+  function setupSwipeToUnmute(card: HTMLElement, itemId: string) {
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+
+    const onStart = (e: TouchEvent | MouseEvent) => {
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      startX = clientX;
+      currentX = clientX;
+      isDragging = true;
+      card.classList.add("swiping");
+    };
+
+    const onMove = (e: TouchEvent | MouseEvent) => {
+      if (!isDragging) return;
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      currentX = clientX;
+      const diff = currentX - startX;
+
+      // Only allow left swipe
+      if (diff < 0) {
+        card.style.transform = `translateX(${Math.max(diff, -100)}px)`;
+        card.style.opacity = String(1 + diff / 200);
+      }
+    };
+
+    const onEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      card.classList.remove("swiping");
+
+      const diff = currentX - startX;
+
+      if (diff < -60) {
+        // Threshold reached - unmute
+        card.classList.add("dismissed");
+        haptic();
+
+        setTimeout(() => {
+          unmuteItem(itemId, card);
+        }, 200);
+      } else {
+        // Reset position
+        card.style.transform = "";
+        card.style.opacity = "";
+      }
+    };
+
+    card.addEventListener("touchstart", onStart, { passive: true });
+    card.addEventListener("touchmove", onMove, { passive: true });
+    card.addEventListener("touchend", onEnd);
+    card.addEventListener("mousedown", onStart);
+    card.addEventListener("mousemove", onMove);
+    card.addEventListener("mouseup", onEnd);
+    card.addEventListener("mouseleave", onEnd);
+  }
+
+  function unmuteItem(itemId: string, card: HTMLElement) {
+    const items = state.payload?.items || [];
+    const item = items.find((i: any) => i.id === itemId);
+
+    safeSend(state.tabId, { type: "fomoff:unmute", id: itemId });
+
+    showToast(`Unmuted "${(item?.snippet || "item").slice(0, 20)}..."`, () => {
+      // Undo: re-mute
+      safeSend(state.tabId, { type: "fomoff:remute", id: itemId });
+      card.classList.remove("dismissed");
+      card.style.transform = "";
+      card.style.opacity = "";
+    });
+
+    // Update local state
+    state.payload.items = items.filter((i: any) => i.id !== itemId);
+    state.payload.total = Math.max(0, (state.payload.total || 0) - 1);
+    updateOrb(state.payload);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Toast
+  // ═══════════════════════════════════════════════════════════════════════════
+  function showToast(message: string, undoFn: (() => void) | null) {
+    if (state.toastTimeout) {
+      clearTimeout(state.toastTimeout);
+    }
+
+    dom.toastMessage!.textContent = message;
+    dom.toastUndo!.hidden = !undoFn;
+    state.lastUndo = undoFn;
+    dom.toast!.hidden = false;
+
+    state.toastTimeout = window.setTimeout(() => {
+      dom.toast!.hidden = true;
+      state.lastUndo = null;
+    }, 5000);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Site Control
+  // ═══════════════════════════════════════════════════════════════════════════
+  function updateSiteControl(settings: any) {
+    const status = shared.getSiteStatus(settings, state.host);
+
+    dom.siteHost!.textContent = state.host || "—";
+
+    // Update toggle states
+    const isActive = status.siteEnabled && !status.allowlisted;
+    const isTrusted = status.allowlisted;
+
+    dom.siteActive!.classList.toggle("active", isActive);
+    dom.siteActive!.setAttribute("aria-pressed", String(isActive));
+
+    dom.siteTrusted!.classList.toggle("active", isTrusted);
+    dom.siteTrusted!.setAttribute("aria-pressed", String(isTrusted));
+  }
+
+  function setSiteActive() {
+    chrome.runtime.sendMessage(
+      { type: "fomoff:set-site-enabled", host: state.host, enabled: true },
+      (settings) => {
+        state.settings = settings;
+        updateSiteControl(settings);
+        sendStateToTab();
+        haptic();
+        showToast("FOMOff active on this site", () => setSiteTrusted());
+      }
+    );
+  }
+
+  function setSiteTrusted() {
+    chrome.runtime.sendMessage(
+      { type: "fomoff:allow-site", host: state.host },
+      (settings) => {
+        state.settings = settings;
+        updateSiteControl(settings);
+        sendStateToTab();
+        haptic();
+        showToast("Trusted this site", () => setSiteActive());
+      }
+    );
+  }
+
+  function sendStateToTab() {
+    const status = shared.getSiteStatus(state.settings, state.host);
+    const enabled = state.settings?.enabled && status.siteEnabled && status.mode !== shared.MODES.OFF;
+    safeSend(state.tabId, { type: "fomoff:set-enabled", enabled });
+    safeSend(state.tabId, { type: "fomoff:set-mode", mode: status.mode });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Settings Sheet
+  // ═══════════════════════════════════════════════════════════════════════════
+  function openSettings() {
+    dom.sheetBackdrop!.classList.add("visible");
+    dom.settingsSheet!.classList.add("visible");
+    haptic();
+  }
+
+  function closeSettings() {
+    dom.sheetBackdrop!.classList.remove("visible");
+    dom.settingsSheet!.classList.remove("visible");
+  }
+
+  function updateSettingsUI(settings: any) {
+    state.settings = settings;
+
+    // Badges toggle
+    const badgesOn = settings.showBadges !== false;
+    dom.toggleBadges!.classList.toggle("on", badgesOn);
+    dom.toggleBadges!.setAttribute("aria-checked", String(badgesOn));
+
+    // Journal toggle
+    const journalOn = settings.journalingEnabled === true;
+    dom.toggleJournal!.classList.toggle("on", journalOn);
+    dom.toggleJournal!.setAttribute("aria-checked", String(journalOn));
+
+    updateSiteControl(settings);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Intro
+  // ═══════════════════════════════════════════════════════════════════════════
+  function showIntro() {
+    dom.introOverlay!.hidden = false;
+  }
+
+  function hideIntro() {
+    dom.introOverlay!.hidden = true;
+    chrome.runtime.sendMessage({ type: "fomoff:update-settings", payload: { hasSeenIntro: true } });
+  }
+
+  function openDemo() {
+    chrome.tabs.create({ url: chrome.runtime.getURL("demo/index.html") });
+    hideIntro();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Data Flow
+  // ═══════════════════════════════════════════════════════════════════════════
+  function updateFromPayload(payload: any) {
+    state.payload = payload || { total: 0, counts: {}, items: [] };
+
+    updateOrb(state.payload);
+
+    // Update Level 1 content
+    const total = getTotal(state.payload);
+    dom.cleanState!.hidden = total > 0;
+    renderSummaryPills(state.payload.counts || {});
+    renderSharePreview(state.payload);
+
+    // Update Level 2 content
+    renderReceipt(state.payload.items || []);
+  }
+
+  function requestState() {
+    if (!state.tabId) return;
+    safeSend(state.tabId, { type: "fomoff:get-state" }, (response) => {
+      updateFromPayload(response);
+    });
+  }
+
+  function refreshSettings() {
+    chrome.runtime.sendMessage({ type: "fomoff:get-settings" }, (settings) => {
+      if (settings) {
+        updateSettingsUI(settings);
+
+        // Show intro if first time
+        if (!settings.hasSeenIntro) {
+          showIntro();
+        }
+        return;
+      }
+
+      // Fallback to storage
+      chrome.storage.local.get(["settings"], (result) => {
+        updateSettingsUI(shared.mergeSettings(result.settings));
       });
     });
   }
 
-  function exportJournal() {
-    chrome.runtime.sendMessage({ type: "fomoff:get-journal" }, (journal) => {
-      shared.exportAsJson(journal || {}, "fomoff-journal.json");
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Event Handlers
+  // ═══════════════════════════════════════════════════════════════════════════
+  function setupEventListeners() {
+    // Orb tap → Level 1
+    dom.orbContainer!.addEventListener("click", () => {
+      if (state.level === 0) {
+        showLevel(1);
+        haptic();
+      } else if (state.level === 1) {
+        showLevel(0);
+      }
+    });
+
+    dom.orbContainer!.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        dom.orbContainer!.click();
+      }
+    });
+
+    // Show details → Level 2
+    dom.btnShowDetails!.addEventListener("click", () => {
+      showLevel(2);
+      haptic();
+    });
+
+    // Back to summary
+    dom.btnBackToSummary!.addEventListener("click", () => {
+      showLevel(1);
+    });
+
+    // Share actions
+    dom.btnCopyShare!.addEventListener("click", copyShareImage);
+    dom.btnDownloadShare!.addEventListener("click", downloadShareImage);
+
+    // Site toggles
+    dom.siteActive!.addEventListener("click", setSiteActive);
+    dom.siteTrusted!.addEventListener("click", setSiteTrusted);
+
+    // Settings
+    dom.btnSettings!.addEventListener("click", openSettings);
+    dom.btnCloseSettings!.addEventListener("click", closeSettings);
+    dom.sheetBackdrop!.addEventListener("click", closeSettings);
+
+    // Toggle switches
+    dom.toggleBadges!.addEventListener("click", () => {
+      const newValue = !dom.toggleBadges!.classList.contains("on");
+      chrome.runtime.sendMessage(
+        { type: "fomoff:update-settings", payload: { showBadges: newValue } },
+        updateSettingsUI
+      );
+      haptic();
+    });
+
+    dom.toggleJournal!.addEventListener("click", () => {
+      const newValue = !dom.toggleJournal!.classList.contains("on");
+      chrome.runtime.sendMessage(
+        { type: "fomoff:update-settings", payload: { journalingEnabled: newValue } },
+        updateSettingsUI
+      );
+      haptic();
+    });
+
+    // Export & Reset
+    dom.btnExport!.addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "fomoff:get-journal" }, (journal) => {
+        shared.exportAsJson(journal || {}, "fomoff-journal.json");
+      });
+    });
+
+    dom.btnReset!.addEventListener("click", () => {
+      if (confirm("Reset all FOMOff data? This cannot be undone.")) {
+        chrome.runtime.sendMessage({ type: "fomoff:reset-all" }, () => {
+          refreshSettings();
+          requestState();
+          closeSettings();
+          showToast("All data reset", null);
+        });
+      }
+    });
+
+    // Intro
+    dom.btnTryDemo!.addEventListener("click", openDemo);
+    dom.btnSkipIntro!.addEventListener("click", hideIntro);
+
+    // Toast undo
+    dom.toastUndo!.addEventListener("click", () => {
+      if (state.lastUndo) {
+        state.lastUndo();
+        state.lastUndo = null;
+      }
+      dom.toast!.hidden = true;
+    });
+
+    // Coaching tip dismiss
+    dom.tipSwipeDismiss!.addEventListener("click", () => {
+      dom.tipSwipe!.hidden = true;
+      state.coachingShown.swipe = true;
+    });
+
+    // Receipt item actions (delegation)
+    dom.receiptList!.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest("button[data-action]") as HTMLElement;
+      if (!btn) return;
+
+      const item = btn.closest(".item") as HTMLElement;
+      if (!item) return;
+
+      const id = item.dataset.id;
+      const action = btn.dataset.action;
+
+      if (action === "unmute" && id) {
+        item.classList.add("dismissed");
+        setTimeout(() => unmuteItem(id, item), 200);
+      }
+
+      if (action === "preview" && id) {
+        safeSend(state.tabId, { type: "fomoff:preview", id });
+      }
+    });
+
+    // Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (dom.settingsSheet!.classList.contains("visible")) {
+          closeSettings();
+        } else if (!dom.introOverlay!.hidden) {
+          hideIntro();
+        } else if (state.level > 0) {
+          showLevel(state.level - 1);
+        }
+      }
+    });
+
+    // Messages from background/content
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message.type === "fomoff:state") {
+        updateFromPayload(message.payload);
+      }
     });
   }
 
-  function deleteAll() {
-    chrome.runtime.sendMessage({ type: "fomoff:reset-all" }, () => {
-      refreshSettings();
-      requestState();
-      loadJournal();
-    });
-  }
-
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Initialize
+  // ═══════════════════════════════════════════════════════════════════════════
   function init() {
+    setupEventListeners();
     refreshSettings();
+    showLevel(0);
+
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
-      if (!tab || !tab.id || !tab.url) {
+      if (!tab?.id || !tab.url) {
         updateFromPayload({ total: 0, counts: {}, items: [] });
         return;
       }
+
       state.tabId = tab.id;
+
       try {
         state.host = new URL(tab.url).host;
-      } catch (error) {
+      } catch {
         state.host = "";
       }
-      elements.siteHost.textContent = state.host || "(no site)";
+
+      dom.siteHost!.textContent = state.host || "—";
 
       chrome.runtime.sendMessage({ type: "fomoff:ensure-injected", tabId: state.tabId }, () => {
         requestState();
       });
     });
   }
-
-  elements.globalToggle.addEventListener("change", () => {
-    chrome.runtime.sendMessage(
-      { type: "fomoff:set-global-enabled", enabled: elements.globalToggle.checked },
-      (settings) => {
-        updateSettingsUI(settings);
-        sendEnabledToTab();
-      }
-    );
-  });
-
-  elements.siteToggle.addEventListener("click", () => {
-    const status = getSiteStatus(state.settings);
-    const nextEnabled = !status.siteEnabled;
-    chrome.runtime.sendMessage(
-      { type: "fomoff:set-site-enabled", host: state.host, enabled: nextEnabled },
-      (settings) => {
-        updateSettingsUI(settings);
-        sendEnabledToTab();
-      }
-    );
-  });
-
-  elements.siteAllow.addEventListener("click", () => {
-    const status = getSiteStatus(state.settings);
-    if (status.allowlisted) {
-      chrome.runtime.sendMessage(
-        { type: "fomoff:set-site-enabled", host: state.host, enabled: true },
-        (settings) => {
-          updateSettingsUI(settings);
-          sendEnabledToTab();
-        }
-      );
-      return;
-    }
-    chrome.runtime.sendMessage({ type: "fomoff:allow-site", host: state.host }, (settings) => {
-      updateSettingsUI(settings);
-      sendEnabledToTab();
-    });
-  });
-
-  elements.badgesToggle.addEventListener("change", () => {
-    chrome.runtime.sendMessage(
-      { type: "fomoff:update-settings", payload: { showBadges: elements.badgesToggle.checked } },
-      (settings) => updateSettingsUI(settings)
-    );
-  });
-
-  elements.journalToggle.addEventListener("change", () => {
-    chrome.runtime.sendMessage(
-      { type: "fomoff:update-settings", payload: { journalingEnabled: elements.journalToggle.checked } },
-      (settings) => updateSettingsUI(settings)
-    );
-  });
-
-  elements.journalRetention.addEventListener("change", () => {
-    chrome.runtime.sendMessage(
-      {
-        type: "fomoff:update-settings",
-        payload: { journalRetentionDays: Number(elements.journalRetention.value) }
-      },
-      (settings) => updateSettingsUI(settings)
-    );
-  });
-
-  elements.shareQuickOptions.addEventListener("click", () => {
-    state.shareOpen = !state.shareOpen;
-    elements.sharePanel.hidden = !state.shareOpen;
-    elements.shareQuickOptions.textContent = state.shareOpen ? "Hide options" : "More options";
-    if (state.shareOpen && state.lastPayload) {
-      renderSharePreview(state.lastPayload);
-    }
-  });
-
-  elements.shareHideSite.addEventListener("change", () => {
-    if (state.shareOpen && state.lastPayload) {
-      renderSharePreview(state.lastPayload);
-    }
-  });
-
-  elements.shareQuickCopy.addEventListener("click", async () => {
-    const original = elements.shareQuickCopy.textContent;
-    await copyShareImage();
-    elements.shareQuickCopy.textContent = "Copied";
-    setTimeout(() => {
-      elements.shareQuickCopy.textContent = original;
-    }, 1500);
-  });
-
-  elements.shareCopy.addEventListener("click", copyShareImage);
-  elements.shareDownload.addEventListener("click", async () => {
-    if (!shareCard || !state.lastPayload) return;
-    const data = getShareData(state.lastPayload);
-    data.hideHost = elements.shareHideSite.checked;
-    const blob = await shareCard.renderBlob(data);
-    if (blob) downloadShareImage(blob);
-  });
-
-  document.querySelectorAll("[data-info]").forEach((button) => {
-    button.addEventListener("click", () => {
-      openSheet(button.dataset.info);
-    });
-  });
-
-  elements.sheetClose.addEventListener("click", closeSheet);
-  elements.infoSheet.addEventListener("click", (event) => {
-    if (event.target === elements.infoSheet) closeSheet();
-  });
-
-  elements.introDismiss.addEventListener("click", hideIntroBanner);
-
-  elements.exportJournal.addEventListener("click", exportJournal);
-  elements.deleteAll.addEventListener("click", deleteAll);
-
-  document.addEventListener("click", handleActions);
-  document.addEventListener("click", handleModeClick);
-  document.addEventListener("click", handleTabSwitch);
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      if (!elements.infoSheet.hidden) {
-        closeSheet();
-      }
-      if (isIntroBannerVisible()) {
-        hideIntroBanner();
-      }
-    }
-  });
-
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === "fomoff:state") {
-      updateFromPayload(message.payload);
-    }
-  });
 
   init();
 })();
