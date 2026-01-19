@@ -9,19 +9,17 @@
     if (!host) return;
     const settings = await background.storage.getSettings();
     const override = settings.siteOverrides[host] || {};
-    const snoozed = override.snoozeUntil && override.snoozeUntil > Date.now();
-    const currentlyEnabled = override.enabled !== false && !override.allowlist && !snoozed;
+    const currentlyEnabled = override.enabled !== false && !override.allowlist;
     const nextEnabled = !currentlyEnabled;
     await background.storage.setSiteEnabled(host, nextEnabled, false);
-    chrome.tabs.sendMessage(tab.id, { type: "fomoff:set-enabled", enabled: nextEnabled });
+    chrome.tabs.sendMessage(tab.id, { type: "fomoff:set-enabled", enabled: nextEnabled }, () => {
+      if (chrome.runtime.lastError) {
+        // Silently ignore - tab may be an error page or restricted URL
+      }
+    });
   }
 
   function handleCommand(command, tab) {
-    if (command === "toggle-inspector") {
-      if (tab && tab.id) {
-        chrome.tabs.sendMessage(tab.id, { type: "fomoff:toggle-inspector" });
-      }
-    }
     if (command === "toggle-site") {
       toggleSite(tab);
     }

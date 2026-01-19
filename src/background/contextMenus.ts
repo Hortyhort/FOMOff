@@ -29,19 +29,28 @@
     });
   }
 
+  // Helper to safely send messages without "Unchecked runtime.lastError" warnings
+  function safeSendMessage(tabId, message) {
+    chrome.tabs.sendMessage(tabId, message, () => {
+      if (chrome.runtime.lastError) {
+        // Silently ignore - tab may be an error page or restricted URL
+      }
+    });
+  }
+
   function handleClick(info, tab) {
     if (!tab || !tab.id) return;
     if (info.menuItemId === MENU_IDS.MUTE) {
-      chrome.tabs.sendMessage(tab.id, { type: "fomoff:context-action", action: "mute" });
+      safeSendMessage(tab.id, { type: "fomoff:context-action", action: "mute" });
     }
     if (info.menuItemId === MENU_IDS.UNMUTE) {
-      chrome.tabs.sendMessage(tab.id, { type: "fomoff:context-action", action: "unmute" });
+      safeSendMessage(tab.id, { type: "fomoff:context-action", action: "unmute" });
     }
     if (info.menuItemId === MENU_IDS.ALLOW_SITE) {
       const host = shared.getHostFromUrl(tab.url);
       if (host) {
         background.storage.setSiteEnabled(host, false, true).then(() => {
-          chrome.tabs.sendMessage(tab.id, { type: "fomoff:set-enabled", enabled: false });
+          safeSendMessage(tab.id, { type: "fomoff:set-enabled", enabled: false });
         });
       }
     }

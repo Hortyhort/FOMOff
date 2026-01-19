@@ -19,23 +19,13 @@
     journalRetentionDays: 30,
     showBadges: true,
     falsePositives: new Set(),
-    inspector: null,
-    onPick: null,
-    snoozeTimer: null,
     previewTimers: new Map()
   };
 
   content.state = state;
 
-  function mergeSettings(stored) {
-    const merged = Object.assign({}, shared.DEFAULT_SETTINGS, stored || {});
-    merged.siteOverrides = merged.siteOverrides || {};
-    merged.falsePositives = merged.falsePositives || [];
-    if (typeof merged.showBadges === "undefined") {
-      merged.showBadges = typeof merged.badgesEnabled !== "undefined" ? merged.badgesEnabled : true;
-    }
-    return merged;
-  }
+  // Use shared mergeSettings instead of duplicating
+  const mergeSettings = shared.mergeSettings;
 
   function getHost() {
     return location && location.host ? location.host : "";
@@ -47,15 +37,12 @@
 
   function computeEnabled(settings, host) {
     const siteOverride = getSiteOverride(settings, host);
-    const globalEnabled = settings.enabled && settings.mode !== shared.MODES.OFF;
-    const snoozed = siteOverride.snoozeUntil && siteOverride.snoozeUntil > Date.now();
-    const siteEnabled = siteOverride.enabled !== false && !siteOverride.allowlist && !snoozed;
+    const globalEnabled = settings.enabled;
+    const siteEnabled = siteOverride.enabled !== false && !siteOverride.allowlist;
     const mode = siteOverride.mode || settings.mode;
     return {
       enabled: globalEnabled && siteEnabled && mode !== shared.MODES.OFF,
-      mode,
-      snoozed,
-      snoozeUntil: siteOverride.snoozeUntil || null
+      mode
     };
   }
 
@@ -184,31 +171,7 @@
 
   function setMode(mode) {
     state.mode = mode;
-    state.records.forEach(({ element }) => {
-      if (element.dataset.fomoffManual) return;
-      element.classList.remove("fomoff-zen", "fomoff-collapsed");
-      if (mode === shared.MODES.ZEN) {
-        element.classList.add("fomoff-zen");
-      }
-    });
     notifyUpdate();
-  }
-
-  function scheduleSnooze(settings) {
-    if (state.snoozeTimer) {
-      clearTimeout(state.snoozeTimer);
-      state.snoozeTimer = null;
-    }
-    const override = getSiteOverride(settings, state.host);
-    if (!override.snoozeUntil) return;
-    const remaining = override.snoozeUntil - Date.now();
-    if (remaining <= 0) return;
-    state.snoozeTimer = setTimeout(async () => {
-      const updated = await loadSettings();
-      const status = computeEnabled(updated, state.host);
-      state.mode = status.mode;
-      setEnabled(status.enabled);
-    }, remaining + 200);
   }
 
   function notifyUpdate() {
@@ -391,11 +354,6 @@
         }
         sendResponse({ ok: true });
         break;
-      case "fomoff:toggle-inspector":
-        state.onPick = (target) => toggleMute(target);
-        content.toggleInspector(state);
-        sendResponse({ ok: true });
-        break;
       case "fomoff:context-action":
         if (message.action === "mute" && state.lastContextElement) {
           toggleMute(state.lastContextElement);
@@ -448,7 +406,6 @@
     state.mode = status.mode;
     setEnabled(status.enabled);
     setBadgeMode(state.showBadges);
-    scheduleSnooze(settings);
 
     document.addEventListener("contextmenu", onContextMenu, true);
   }
@@ -465,7 +422,6 @@
     state.mode = status.mode;
     setEnabled(status.enabled);
     setBadgeMode(state.showBadges);
-    scheduleSnooze(settings);
   });
 
   init();

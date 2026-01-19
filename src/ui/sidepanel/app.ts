@@ -8,7 +8,6 @@
     siteStatus: document.getElementById("site-status"),
     siteToggle: document.getElementById("site-toggle"),
     siteAllow: document.getElementById("site-allow"),
-    siteSnooze: document.getElementById("site-snooze"),
     badgesToggle: document.getElementById("badges-toggle"),
     totalCount: document.getElementById("total-count"),
     foundCount: document.getElementById("found-count"),
@@ -32,25 +31,14 @@
     sheetTitle: document.getElementById("sheet-title"),
     sheetBody: document.getElementById("sheet-body"),
     sheetClose: document.getElementById("sheet-close"),
-    introOverlay: document.getElementById("intro-overlay"),
-    introHighlight: document.getElementById("intro-highlight"),
-    introCard: document.getElementById("intro-card"),
-    introStep: document.getElementById("intro-step"),
-    introTitle: document.getElementById("intro-title"),
-    introText: document.getElementById("intro-text"),
-    introNext: document.getElementById("intro-next"),
-    introSkip: document.getElementById("intro-skip"),
-    introReset: document.getElementById("intro-reset"),
+    introBanner: document.getElementById("intro-banner"),
+    introDismiss: document.getElementById("intro-dismiss"),
     tabs: Array.from(document.querySelectorAll(".tab")),
     detectionsTab: document.getElementById("detections-tab"),
     journalTab: document.getElementById("journal-tab"),
     journalList: document.getElementById("journal-list"),
     journalToggle: document.getElementById("journal-toggle"),
     journalRetention: document.getElementById("journal-retention"),
-    journalRecap: document.getElementById("journal-recap"),
-    journalWeeklyCount: document.getElementById("journal-weekly-count"),
-    journalRecapCopy: document.getElementById("journal-recap-copy"),
-    journalRecapDownload: document.getElementById("journal-recap-download"),
     exportJournal: document.getElementById("export-journal"),
     deleteAll: document.getElementById("delete-all")
   };
@@ -64,10 +52,7 @@
     cleanPulseShown: false,
     shareOpen: false,
     newFindings: false,
-    tabInitialized: false,
-    introIndex: 0,
-    weeklySummary: null,
-    forceIntro: false
+    tabInitialized: false
   };
 
   const GROUPS = [
@@ -93,7 +78,6 @@
       title: "Modes",
       items: [
         "Calm: gently de-emphasizes pressure cues without breaking pages.",
-        "Zen Shopping: stronger dimming for popups, timers, and urgency cues (still reversible).",
         "Off: disables treatment for this site."
       ]
     },
@@ -108,7 +92,6 @@
       title: "Site controls",
       items: [
         "Pause: stop treatments on this site until you resume.",
-        "Snooze: take a 1-hour break without forgetting your settings.",
         "Trust: keep this site untouched until you remove trust."
       ]
     },
@@ -139,32 +122,6 @@
     return Number.isFinite(total) ? total : 0;
   }
 
-  function formatTime(timestamp) {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-
-  function parseDateKey(dateKey) {
-    const date = new Date(`${dateKey}T00:00:00`);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-
-  function computeWeeklySummary(journal) {
-    const summary = { total: 0, counts: {} };
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 6);
-    Object.entries(journal || {}).forEach(([dateKey, entry]) => {
-      const date = parseDateKey(dateKey);
-      if (!date || date < cutoff) return;
-      summary.total += entry.total || 0;
-      const categories = entry.categories || {};
-      Object.keys(categories).forEach((category) => {
-        summary.counts[category] = (summary.counts[category] || 0) + categories[category];
-      });
-    });
-    return summary;
-  }
-
   function openSheet(key) {
     const info = INFO_CONTENT[key];
     if (!info) return;
@@ -180,8 +137,8 @@
     elements.sheetClose.focus();
   }
 
-  function isIntroOpen() {
-    return !elements.introOverlay.hidden && elements.introOverlay.style.display !== "none";
+  function isIntroBannerVisible() {
+    return !elements.introBanner.hidden;
   }
 
   function closeSheet() {
@@ -189,17 +146,9 @@
     elements.infoSheet.style.display = "none";
   }
 
+  // Use shared getSiteStatus
   function getSiteStatus(settings) {
-    const override = settings.siteOverrides[state.host] || {};
-    const snoozed = override.snoozeUntil && override.snoozeUntil > Date.now();
-    const siteEnabled = override.enabled !== false && !override.allowlist && !snoozed;
-    return {
-      siteEnabled,
-      allowlisted: !!override.allowlist,
-      snoozed,
-      snoozeUntil: override.snoozeUntil || null,
-      mode: override.mode || settings.mode
-    };
+    return shared.getSiteStatus(settings, state.host);
   }
 
   function updateSiteUI(settings) {
@@ -208,8 +157,6 @@
 
     if (status.allowlisted) {
       elements.siteStatus.textContent = "Trusted site - we'll stay quiet here.";
-    } else if (status.snoozed) {
-      elements.siteStatus.textContent = `Snoozed until ${formatTime(status.snoozeUntil)}.`;
     } else {
       elements.siteStatus.textContent = status.siteEnabled
         ? "Active and watching for pressure."
@@ -218,11 +165,7 @@
 
     elements.siteToggle.textContent = status.siteEnabled ? "Pause on this site" : "Resume on this site";
     elements.siteAllow.textContent = status.allowlisted ? "Remove trust" : "Trust this site";
-    elements.siteSnooze.textContent = status.snoozed ? "Snoozed" : "Snooze 1 hour";
-    elements.siteSnooze.disabled = status.snoozed;
-
     elements.siteToggle.hidden = status.allowlisted;
-    elements.siteSnooze.hidden = status.allowlisted;
     elements.siteAllow.hidden = false;
   }
 
@@ -234,9 +177,6 @@
     });
     if (mode === shared.MODES.CALM) {
       elements.modeNote.textContent = "Recommended - gentle dimming, minimal risk.";
-    } else if (mode === shared.MODES.ZEN) {
-      elements.modeNote.textContent =
-        "Stronger dimming for popups, timers, and urgency cues. Always reversible.";
     } else {
       elements.modeNote.textContent = "No page changes on this site.";
     }
@@ -366,18 +306,6 @@
     };
   }
 
-  function getWeeklyShareData(summary) {
-    return {
-      host: "Weekly recap",
-      total: summary.total || 0,
-      counts: summary.counts || {},
-      snippets: [],
-      headline: "FOMOff - Weekly Recap",
-      subhead: "pressure tactics muted (last 7 days)",
-      footer: "FOMOff - Weekly Recap"
-    };
-  }
-
   function renderSharePreview(payload) {
     if (!shareCard || !payload) return;
     const data = getShareData(payload);
@@ -407,99 +335,13 @@
     }
   }
 
-  const INTRO_STEPS = [
-    {
-      title: "FOMOff turns down manipulative pressure tricks.",
-      text: "Countdowns, scarcity, social proof. Nothing leaves your device.",
-      targets: []
-    },
-    {
-      title: "Start with Calm.",
-      text: "Switch to Zen when a page gets noisy - stronger dimming for popups, timers, and urgency cues. Always reversible.",
-      targets: ["#mode-section"]
-    },
-    {
-      title: "Badges and share are the magic.",
-      text: "Badges label pressure on the page. Share creates a screenshot-ready report.",
-      targets: ["#badges-row", "#share-block"]
-    }
-  ];
-
-  function getTargetRect(selectors) {
-    const visible = selectors
-      .map((selector) => document.querySelector(selector))
-      .filter((element) => element && !element.hidden && element.offsetParent !== null);
-    if (!visible.length) return null;
-    let rect = null;
-    visible.forEach((element) => {
-      const next = element.getBoundingClientRect();
-      if (!rect) {
-        rect = { top: next.top, left: next.left, right: next.right, bottom: next.bottom };
-        return;
-      }
-      rect.top = Math.min(rect.top, next.top);
-      rect.left = Math.min(rect.left, next.left);
-      rect.right = Math.max(rect.right, next.right);
-      rect.bottom = Math.max(rect.bottom, next.bottom);
-    });
-    return rect;
+  function showIntroBanner() {
+    elements.introBanner.hidden = false;
   }
 
-  function updateIntroHighlight() {
-    const step = INTRO_STEPS[state.introIndex];
-    if (!step || !step.targets.length) {
-      elements.introHighlight.style.display = "none";
-      return;
-    }
-    const rect = getTargetRect(step.targets);
-    if (!rect) {
-      elements.introHighlight.style.display = "none";
-      return;
-    }
-    const padding = 6;
-    const top = Math.max(8, rect.top - padding);
-    const left = Math.max(8, rect.left - padding);
-    const width = Math.min(window.innerWidth - left - 8, rect.right - rect.left + padding * 2);
-    const height = Math.min(window.innerHeight - top - 8, rect.bottom - rect.top + padding * 2);
-    elements.introHighlight.style.display = "block";
-    elements.introHighlight.style.top = `${top}px`;
-    elements.introHighlight.style.left = `${left}px`;
-    elements.introHighlight.style.width = `${width}px`;
-    elements.introHighlight.style.height = `${height}px`;
-  }
-
-  function showIntroStep(index) {
-    state.introIndex = index;
-    const step = INTRO_STEPS[index];
-    if (!step) return;
-    elements.introStep.textContent = `${index + 1}/${INTRO_STEPS.length}`;
-    elements.introTitle.textContent = step.title;
-    elements.introText.textContent = step.text;
-    elements.introNext.textContent = index === INTRO_STEPS.length - 1 ? "Got it" : "Next";
-    elements.introSkip.hidden = index === INTRO_STEPS.length - 1;
-    updateIntroHighlight();
-  }
-
-  function startIntro() {
-    elements.introOverlay.hidden = false;
-    elements.introOverlay.removeAttribute("hidden");
-    elements.introOverlay.style.display = "block";
-    showIntroStep(0);
-    elements.introNext.focus();
-  }
-
-  function closeIntro(markSeen) {
-    elements.introOverlay.hidden = true;
-    elements.introOverlay.setAttribute("hidden", "");
-    elements.introOverlay.style.display = "none";
-    elements.introHighlight.style.display = "none";
-    closeSheet();
-    state.forceIntro = false;
-    if (markSeen) {
-      chrome.runtime.sendMessage({ type: "fomoff:update-settings", payload: { hasSeenIntro: true } }, (settings) => {
-        if (settings) updateSettingsUI(settings);
-      });
-    }
+  function hideIntroBanner() {
+    elements.introBanner.hidden = true;
+    chrome.runtime.sendMessage({ type: "fomoff:update-settings", payload: { hasSeenIntro: true } });
   }
 
   async function copyShareImage() {
@@ -517,22 +359,6 @@
       }
     }
     downloadShareImage(blob);
-  }
-
-  async function copyWeeklyRecap() {
-    if (!shareCard || !state.weeklySummary) return;
-    const data = getWeeklyShareData(state.weeklySummary);
-    const blob = await shareCard.renderBlob(data);
-    if (!blob) return;
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        return;
-      } catch (error) {
-        // Fallback to download below.
-      }
-    }
-    downloadShareImage(blob, "fomoff-weekly-recap.png");
   }
 
   function downloadShareImage(blob, filename) {
@@ -556,9 +382,6 @@
     renderDetections(payload.items || []);
     updateCleanState(payload);
     updateShareSection(payload);
-    if (!elements.introOverlay.hidden) {
-      updateIntroHighlight();
-    }
   }
 
   function updateSettingsUI(settings) {
@@ -569,13 +392,9 @@
     updateModeUI(settings.mode);
     elements.journalToggle.checked = settings.journalingEnabled;
     elements.journalRetention.value = String(settings.journalRetentionDays || 30);
-    if (!settings.journalingEnabled) {
-      elements.journalRecap.hidden = true;
+    if (!settings.hasSeenIntro && !isIntroBannerVisible()) {
+      showIntroBanner();
     }
-    if ((state.forceIntro || !settings.hasSeenIntro) && !isIntroOpen()) {
-      startIntro();
-    }
-    state.forceIntro = false;
   }
 
   function requestState() {
@@ -600,18 +419,32 @@
         return;
       }
       chrome.storage.local.get(["settings"], (result) => {
-        const merged = Object.assign({}, shared.DEFAULT_SETTINGS, result.settings || {});
-        updateSettingsUI(merged);
+        updateSettingsUI(shared.mergeSettings(result.settings));
       });
+    });
+  }
+
+  // Helper to safely send messages without "Unchecked runtime.lastError" warnings
+  function safeSendMessage(tabId, message, callback) {
+    if (!tabId) {
+      if (callback) callback(null);
+      return;
+    }
+    chrome.tabs.sendMessage(tabId, message, (response) => {
+      if (chrome.runtime.lastError) {
+        // Silently ignore - tab may be an error page or restricted URL
+        if (callback) callback(null);
+        return;
+      }
+      if (callback) callback(response);
     });
   }
 
   function sendEnabledToTab() {
     const status = getSiteStatus(state.settings);
-    const enabled =
-      state.settings.enabled && status.siteEnabled && status.mode !== shared.MODES.OFF && !status.snoozed;
-    chrome.tabs.sendMessage(state.tabId, { type: "fomoff:set-enabled", enabled });
-    chrome.tabs.sendMessage(state.tabId, { type: "fomoff:set-mode", mode: status.mode });
+    const enabled = state.settings.enabled && status.siteEnabled && status.mode !== shared.MODES.OFF;
+    safeSendMessage(state.tabId, { type: "fomoff:set-enabled", enabled });
+    safeSendMessage(state.tabId, { type: "fomoff:set-mode", mode: status.mode });
   }
 
   function handleActions(event) {
@@ -623,13 +456,13 @@
     if (!id) return;
 
     if (button.dataset.action === "unmute") {
-      chrome.tabs.sendMessage(state.tabId, { type: "fomoff:unmute", id });
+      safeSendMessage(state.tabId, { type: "fomoff:unmute", id });
     }
     if (button.dataset.action === "preview") {
-      chrome.tabs.sendMessage(state.tabId, { type: "fomoff:preview", id });
+      safeSendMessage(state.tabId, { type: "fomoff:preview", id });
     }
     if (button.dataset.action === "false-positive") {
-      chrome.tabs.sendMessage(state.tabId, { type: "fomoff:report-false-positive", id });
+      safeSendMessage(state.tabId, { type: "fomoff:report-false-positive", id });
     }
     if (button.dataset.action === "allow-site") {
       chrome.runtime.sendMessage({ type: "fomoff:allow-site", host: state.host }, (settings) => {
@@ -676,13 +509,6 @@
   function loadJournal() {
     chrome.runtime.sendMessage({ type: "fomoff:get-journal" }, (journal) => {
       elements.journalList.innerHTML = "";
-      const summary = computeWeeklySummary(journal || {});
-      state.weeklySummary = summary;
-      const showRecap = state.settings && state.settings.journalingEnabled && summary.total > 0;
-      elements.journalRecap.hidden = !showRecap;
-      if (showRecap) {
-        elements.journalWeeklyCount.textContent = String(summary.total);
-      }
       const entries = Object.entries(journal || {}).sort((a, b) => (a[0] < b[0] ? 1 : -1));
       if (!entries.length) {
         const empty = document.createElement("div");
@@ -702,13 +528,7 @@
 
   function exportJournal() {
     chrome.runtime.sendMessage({ type: "fomoff:get-journal" }, (journal) => {
-      const blob = new Blob([JSON.stringify(journal || {}, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "fomoff-journal.json";
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      shared.exportAsJson(journal || {}, "fomoff-journal.json");
     });
   }
 
@@ -782,13 +602,6 @@
     });
   });
 
-  elements.siteSnooze.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ type: "fomoff:snooze-site", host: state.host }, (settings) => {
-      updateSettingsUI(settings);
-      sendEnabledToTab();
-    });
-  });
-
   elements.badgesToggle.addEventListener("change", () => {
     chrome.runtime.sendMessage(
       { type: "fomoff:update-settings", payload: { showBadges: elements.badgesToggle.checked } },
@@ -846,22 +659,6 @@
     if (blob) downloadShareImage(blob);
   });
 
-  elements.journalRecapCopy.addEventListener("click", async () => {
-    const original = elements.journalRecapCopy.textContent;
-    await copyWeeklyRecap();
-    elements.journalRecapCopy.textContent = "Copied";
-    setTimeout(() => {
-      elements.journalRecapCopy.textContent = original;
-    }, 1500);
-  });
-
-  elements.journalRecapDownload.addEventListener("click", async () => {
-    if (!shareCard || !state.weeklySummary) return;
-    const data = getWeeklyShareData(state.weeklySummary);
-    const blob = await shareCard.renderBlob(data);
-    if (blob) downloadShareImage(blob, "fomoff-weekly-recap.png");
-  });
-
   document.querySelectorAll("[data-info]").forEach((button) => {
     button.addEventListener("click", () => {
       openSheet(button.dataset.info);
@@ -873,26 +670,7 @@
     if (event.target === elements.infoSheet) closeSheet();
   });
 
-  elements.introNext.addEventListener("click", () => {
-    if (state.introIndex >= INTRO_STEPS.length - 1) {
-      closeIntro(true);
-      return;
-    }
-    showIntroStep(state.introIndex + 1);
-  });
-
-  elements.introSkip.addEventListener("click", () => closeIntro(true));
-  elements.introReset.addEventListener("click", () => {
-    state.forceIntro = true;
-    if (!isIntroOpen()) startIntro();
-    chrome.runtime.sendMessage({ type: "fomoff:update-settings", payload: { hasSeenIntro: false } }, (settings) => {
-      if (settings) {
-        updateSettingsUI(settings);
-        return;
-      }
-      if (!isIntroOpen()) startIntro();
-    });
-  });
+  elements.introDismiss.addEventListener("click", hideIntroBanner);
 
   elements.exportJournal.addEventListener("click", exportJournal);
   elements.deleteAll.addEventListener("click", deleteAll);
@@ -905,15 +683,9 @@
       if (!elements.infoSheet.hidden) {
         closeSheet();
       }
-      if (!elements.introOverlay.hidden) {
-        closeIntro(true);
+      if (isIntroBannerVisible()) {
+        hideIntroBanner();
       }
-    }
-  });
-
-  window.addEventListener("resize", () => {
-    if (!elements.introOverlay.hidden) {
-      updateIntroHighlight();
     }
   });
 

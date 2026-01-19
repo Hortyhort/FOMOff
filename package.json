@@ -1,17 +1,26 @@
 {
   "name": "fomoff",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:vite": "vite build",
     "dev": "vite",
-    "test": "node scripts/run-tests.mjs",
-    "verify": "node scripts/no-network-check.mjs && node scripts/run-tests.mjs"
+    "watch": "node scripts/build.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "verify": "node scripts/no-network-check.mjs && vitest run",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepare": "husky install",
+    "release": "npm version patch && npm run build && npm run package",
+    "package": "cd dist && zip -r ../fomoff-extension.zip ."
   },
   "devDependencies": {
     "@types/chrome": "^0.0.253",
+    "husky": "^9.0.0",
     "typescript": "^5.4.0",
     "vite": "^5.4.0",
     "vitest": "^1.5.0"

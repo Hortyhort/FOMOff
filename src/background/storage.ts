@@ -3,15 +3,8 @@
   const background = (root.background = root.background || {});
   const shared = root.shared;
 
-  function mergeSettings(stored) {
-    const merged = Object.assign({}, shared.DEFAULT_SETTINGS, stored || {});
-    merged.siteOverrides = merged.siteOverrides || {};
-    merged.falsePositives = merged.falsePositives || [];
-    if (typeof merged.showBadges === "undefined") {
-      merged.showBadges = typeof merged.badgesEnabled !== "undefined" ? merged.badgesEnabled : true;
-    }
-    return merged;
-  }
+  // Use shared mergeSettings instead of duplicating
+  const mergeSettings = shared.mergeSettings;
 
   function getSettings() {
     return new Promise((resolve) => {
@@ -47,8 +40,7 @@
   async function setSiteEnabled(host, enabled, allowlist) {
     return setSiteOverride(host, {
       enabled,
-      allowlist: !!allowlist,
-      snoozeUntil: null
+      allowlist: !!allowlist
     });
   }
 

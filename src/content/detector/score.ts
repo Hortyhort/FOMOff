@@ -3,6 +3,52 @@
   const content = (root.content = root.content || {});
   const shared = root.shared;
 
+  // Signal weights for scoring
+  const WEIGHTS = {
+    keywordBase: 35,
+    keywordBonus: 8,
+    keywordMax: 55,
+    timer: 28,
+    nearPurchase: 12,
+    sticky: 18,
+    highZ: 8,
+    overlay: 12,
+    checkedAddon: 36,
+    chatBubble: 20
+  };
+
+  const THRESHOLD = 35;
+
+  // Category configuration - data-driven instead of repetitive code
+  const CATEGORY_CONFIG = {
+    [shared.CATEGORIES.URGENCY]: {
+      matchField: "urgencyMatches",
+      useTimer: true,
+      useNearPurchase: true
+    },
+    [shared.CATEGORIES.SCARCITY]: {
+      matchField: "scarcityMatches",
+      useNearPurchase: true
+    },
+    [shared.CATEGORIES.SOCIAL_PROOF]: {
+      matchField: "socialMatches",
+      useNearPurchase: true
+    },
+    [shared.CATEGORIES.NAG_OVERLAY]: {
+      matchField: "nagMatches",
+      useSticky: true,
+      useHighZ: true,
+      useOverlay: true,
+      triggerOnVisual: true // Trigger even without keyword matches
+    },
+    [shared.CATEGORIES.FAKE_CHAT]: {
+      matchField: "fakeChatMatches",
+      useSticky: true,
+      useHighZ: true,
+      useChatBubble: true
+    }
+  };
+
   function confidenceFromScore(score) {
     if (score >= 70) return shared.CONFIDENCE.HIGH;
     if (score >= 50) return shared.CONFIDENCE.MEDIUM;
@@ -14,9 +60,7 @@
     const ay = rectA.top + rectA.height / 2;
     const bx = rectB.left + rectB.width / 2;
     const by = rectB.top + rectB.height / 2;
-    const dx = ax - bx;
-    const dy = ay - by;
-    return Math.sqrt(dx * dx + dy * dy);
+    return Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
   }
 
   function isNearCta(element, ctaRects) {
@@ -32,51 +76,59 @@
     return Number.isNaN(parsed) ? 0 : parsed;
   }
 
-  function scoreSignals(signals) {
+  function computeCategoryScore(config, matchData, signals) {
     let score = 0;
     const reasons = [];
+    const matches = matchData[config.matchField] || 0;
 
-    if (signals.keywordMatches > 0) {
-      score += Math.min(35 + signals.keywordMatches * 8, 55);
+    // Keyword matches
+    if (matches > 0) {
+      score += Math.min(WEIGHTS.keywordBase + matches * WEIGHTS.keywordBonus, WEIGHTS.keywordMax);
       reasons.push("keyword match");
     }
 
-    if (signals.timerLike) {
-      score += 28;
+    // Timer boost (urgency only)
+    if (config.useTimer && matchData.timerLike) {
+      score += WEIGHTS.timer;
       reasons.push("timer-like text");
     }
 
-    if (signals.nearPurchase) {
-      score += 12;
+    // Near purchase CTA
+    if (config.useNearPurchase && signals.nearPurchase) {
+      score += WEIGHTS.nearPurchase;
       reasons.push("near purchase action");
     }
 
-    if (signals.sticky) {
-      score += 18;
+    // Visual signals
+    if (config.useSticky && signals.sticky) {
+      score += WEIGHTS.sticky;
       reasons.push("sticky/fixed positioning");
     }
 
-    if (signals.highZ) {
-      score += 8;
+    if (config.useHighZ && signals.highZ) {
+      score += WEIGHTS.highZ;
       reasons.push("high z-index");
     }
 
-    if (signals.overlay) {
-      score += 12;
+    if (config.useOverlay && signals.overlay) {
+      score += WEIGHTS.overlay;
       reasons.push("overlay sizing");
     }
 
-    if (signals.checkedAddon) {
-      score += 36;
-      reasons.push("pre-selected add-on");
-    }
-
-    if (signals.chatBubble) {
-      score += 20;
+    if (config.useChatBubble && signals.chatBubble) {
+      score += WEIGHTS.chatBubble;
       reasons.push("chat-like widget");
     }
 
     return { score, reasons };
+  }
+
+  function shouldEvaluateCategory(config, matchData, signals) {
+    const matches = matchData[config.matchField] || 0;
+    if (matches > 0) return true;
+    if (config.matchField === "urgencyMatches" && matchData.timerLike) return true;
+    if (config.triggerOnVisual && (signals.overlay || signals.highZ)) return true;
+    return false;
   }
 
   function scoreElement(element, text, matchData, context) {
@@ -85,108 +137,64 @@
     if (shared.hasFomoffIgnore(element)) return null;
 
     const style = getComputedStyle(element);
-    const sticky = style.position === "fixed" || style.position === "sticky";
-    const zIndex = getZIndex(style);
-    const highZ = zIndex >= 800;
     const rect = element.getBoundingClientRect();
-    const overlay = sticky && rect.width >= 220 && rect.height >= 60;
-    const nearPurchase = isNearCta(element, context.ctaRects);
 
-    const categoryScores = {};
-    const categoryReasons = {};
-    const categories = shared.CATEGORIES;
+    // Compute visual signals once
+    const signals = {
+      sticky: style.position === "fixed" || style.position === "sticky",
+      highZ: getZIndex(style) >= 800,
+      overlay: false,
+      nearPurchase: isNearCta(element, context.ctaRects),
+      chatBubble: false
+    };
 
-    function applyScore(category, signals) {
-      const scored = scoreSignals(signals);
-      categoryScores[category] = (categoryScores[category] || 0) + scored.score;
-      categoryReasons[category] = (categoryReasons[category] || []).concat(scored.reasons);
-    }
+    signals.overlay = signals.sticky && rect.width >= 220 && rect.height >= 60;
+    signals.chatBubble = signals.sticky && rect.width < 460 && rect.height < 360;
 
-    if (matchData.urgencyMatches > 0 || matchData.timerLike) {
-      applyScore(categories.URGENCY, {
-        keywordMatches: matchData.urgencyMatches,
-        timerLike: matchData.timerLike,
-        nearPurchase,
-        sticky: false,
-        highZ: false,
-        overlay: false,
-        checkedAddon: false,
-        chatBubble: false
-      });
-    }
-
-    if (matchData.scarcityMatches > 0) {
-      applyScore(categories.SCARCITY, {
-        keywordMatches: matchData.scarcityMatches,
-        timerLike: false,
-        nearPurchase,
-        sticky: false,
-        highZ: false,
-        overlay: false,
-        checkedAddon: false,
-        chatBubble: false
-      });
-    }
-
-    if (matchData.socialMatches > 0) {
-      applyScore(categories.SOCIAL_PROOF, {
-        keywordMatches: matchData.socialMatches,
-        timerLike: false,
-        nearPurchase,
-        sticky: false,
-        highZ: false,
-        overlay: false,
-        checkedAddon: false,
-        chatBubble: false
-      });
-    }
-
-    if (matchData.nagMatches > 0 || overlay || highZ) {
-      applyScore(categories.NAG_OVERLAY, {
-        keywordMatches: matchData.nagMatches,
-        timerLike: false,
-        nearPurchase: false,
-        sticky,
-        highZ,
-        overlay,
-        checkedAddon: false,
-        chatBubble: false
-      });
-    }
-
-    if (matchData.fakeChatMatches > 0) {
-      const chatBubble = sticky && rect.width < 460 && rect.height < 360;
-      applyScore(categories.FAKE_CHAT, {
-        keywordMatches: matchData.fakeChatMatches,
-        timerLike: false,
-        nearPurchase: false,
-        sticky,
-        highZ,
-        overlay: false,
-        checkedAddon: false,
-        chatBubble
-      });
-    }
-
+    // Score each category using config
     let bestCategory = null;
     let bestScore = 0;
+    let bestReasons = [];
 
-    Object.keys(categoryScores).forEach((category) => {
-      const score = categoryScores[category];
-      if (score > bestScore) {
-        bestScore = score;
+    for (const [category, config] of Object.entries(CATEGORY_CONFIG)) {
+      if (!shouldEvaluateCategory(config, matchData, signals)) continue;
+
+      const result = computeCategoryScore(config, matchData, signals);
+      if (result.score > bestScore) {
+        bestScore = result.score;
         bestCategory = category;
+        bestReasons = result.reasons;
       }
-    });
+    }
 
-    if (!bestCategory || bestScore < 35) return null;
+    if (!bestCategory || bestScore < THRESHOLD) return null;
 
     return {
       category: bestCategory,
       score: Math.min(bestScore, 100),
       confidence: confidenceFromScore(bestScore),
-      reasons: categoryReasons[bestCategory] || []
+      reasons: bestReasons
     };
+  }
+
+  // Keep scoreSignals for backwards compatibility
+  function scoreSignals(signals) {
+    let score = 0;
+    const reasons = [];
+
+    if (signals.keywordMatches > 0) {
+      score += Math.min(WEIGHTS.keywordBase + signals.keywordMatches * WEIGHTS.keywordBonus, WEIGHTS.keywordMax);
+      reasons.push("keyword match");
+    }
+    if (signals.timerLike) { score += WEIGHTS.timer; reasons.push("timer-like text"); }
+    if (signals.nearPurchase) { score += WEIGHTS.nearPurchase; reasons.push("near purchase action"); }
+    if (signals.sticky) { score += WEIGHTS.sticky; reasons.push("sticky/fixed positioning"); }
+    if (signals.highZ) { score += WEIGHTS.highZ; reasons.push("high z-index"); }
+    if (signals.overlay) { score += WEIGHTS.overlay; reasons.push("overlay sizing"); }
+    if (signals.checkedAddon) { score += WEIGHTS.checkedAddon; reasons.push("pre-selected add-on"); }
+    if (signals.chatBubble) { score += WEIGHTS.chatBubble; reasons.push("chat-like widget"); }
+
+    return { score, reasons };
   }
 
   content.scoreElement = scoreElement;

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "FOMOff",
   "description": "Mute manipulative shopping pressure tactics in real time.",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "action": {
     "default_title": "FOMOff",
     "default_icon": {
@@ -31,18 +31,10 @@
   "host_permissions": [
     "<all_urls>"
   ],
-  "options_page": "ui/options/index.html",
   "side_panel": {
     "default_path": "ui/sidepanel/index.html"
   },
   "commands": {
-    "toggle-inspector": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+X",
-        "mac": "Command+Shift+X"
-      },
-      "description": "Toggle element inspector"
-    },
     "toggle-site": {
       "suggested_key": {
         "default": "Ctrl+Shift+Y",

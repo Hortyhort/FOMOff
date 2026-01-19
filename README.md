@@ -1,14 +1,15 @@
 # FOMOff
 
+[![CI](https://github.com/YOUR_USERNAME/fomoff/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/fomoff/actions/workflows/ci.yml)
+
 FOMOff is a Manifest V3 Chrome extension that mutes manipulative shopping pressure in real time by de-emphasizing dark-pattern elements without breaking pages. It runs 100% client-side, works offline, and keeps all data on your device.
 
 ## What it does
-- Detects urgency timers, scarcity claims, social proof pressure, nag overlays, forced add-ons, and fake chat prompts.
-- Applies a calm visual treatment (opacity, saturation, weight, subtle badges) instead of deleting content.
-- Offers per-site controls, explainable reasons, and reversible unmute actions.
-- Optional local journal to track daily counts (local-only, exportable JSON).
-- Shareable Reality Check card (PNG), on-page badges, and a live toolbar count.
-- Weekly recap (local-only) for a lightweight retention check-in.
+- Detects urgency timers, scarcity claims, social proof pressure, nag overlays, forced add-ons, and fake chat prompts
+- Applies a calm visual treatment (opacity, saturation, weight, subtle badges) instead of deleting content
+- Offers per-site controls, explainable reasons, and reversible unmute actions
+- Optional local journal to track daily counts (local-only, exportable JSON)
+- Shareable Reality Check card (PNG), on-page badges, and a live toolbar count
 
 ## How it works
 1. A lightweight content script scans text nodes with curated patterns.
@@ -21,14 +22,6 @@ Example detections:
 - "Only 3 left in stock" -> Scarcity
 - "23 people are viewing" -> Social proof
 
-Screenshot placeholders:
-- `docs/screenshot-sidepanel.png` (side panel summary)
-- `docs/screenshot-muted-element.png` (badge + muted element)
-- `docs/screenshot-share-card.png` (Reality Check card)
-- `docs/screenshot-journal.png` (journal tab)
-- `docs/screenshot-options.png` (options page)
-- `docs/screenshot-demo.png` (demo page)
-
 ## Quick start
 ```bash
 npm install
@@ -37,35 +30,39 @@ npm run build
 
 Load `dist/` in `chrome://extensions` (Developer mode -> Load unpacked).
 
-### Development
-```bash
-npm run build   # Copy-based build into dist
-npm run build:vite  # Optional Vite build if you switch to bundled entry points
-```
+## Development
 
-### Tests
 ```bash
-npm test
-```
-
-### Verify (no-network + tests)
-```bash
-npm run verify
+npm run watch         # Watch mode for development
+npm run build         # Production build
+npm run test          # Run tests
+npm run test:watch    # Watch tests
+npm run test:coverage # Coverage report
+npm run lint          # TypeScript type checking
+npm run verify        # No-network check + tests
+npm run release       # Bump version, build, package
 ```
 
 ## Architecture
 ```
 src/
-  background/   # service worker, context menus, commands, storage
-  content/      # detection, scoring, treatment, inspector
-  ui/           # side panel + options
-  shared/       # utilities and constants
+  background/      # service worker, context menus, commands, storage
+  content/         # detection, scoring, treatment, badges
+    detector/      # patterns, scanning, scoring
+    treatment/     # styles, apply, restore
+    badges/        # badge positioning and layer
+  ui/sidepanel/    # side panel UI
+  shared/          # utilities, types, messaging, settings
+tests/
+  detector/        # pattern and score tests
+.github/workflows/ # CI pipeline
 ```
 
 Key flows:
-- `background/service_worker.ts` injects content scripts via `chrome.scripting` and handles settings.
-- Content scripts detect + apply treatments, store in-memory records, and report counts.
-- Side panel shows per-page reality checks and controls.
+- `background/service_worker.ts` injects content scripts via `chrome.scripting` and handles settings
+- Content scripts detect + apply treatments, store in-memory records, and report counts
+- Side panel shows per-page reality checks and controls
+- Shared modules provide safe messaging, settings merging, and export utilities
 
 ## Demo page
 Open `demo/index.html` in a browser tab to trigger sample patterns offline.

@@ -30,7 +30,6 @@
 
   const MODES = {
     CALM: "calm",
-    ZEN: "zen",
     OFF: "off"
   };
 

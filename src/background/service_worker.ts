@@ -2,6 +2,8 @@ importScripts(
   "../shared/types.js",
   "../shared/url.js",
   "../shared/hash.js",
+  "../shared/settings.js",
+  "../shared/messaging.js",
   "./storage.js",
   "./contextMenus.js",
   "./commands.js"
@@ -18,6 +20,7 @@ importScripts(
     "shared/dom.js",
     "shared/url.js",
     "shared/hash.js",
+    "shared/settings.js",
     "content/detector/patterns.js",
     "content/detector/score.js",
     "content/treatment/styles.js",
@@ -28,7 +31,6 @@ importScripts(
     "content/detector/observe.js",
     "content/badges/position.js",
     "content/badges/layer.js",
-    "content/inspector/picker.js",
     "content/index.js"
   ];
 
@@ -39,7 +41,14 @@ importScripts(
           target: { tabId },
           files: CONTENT_SCRIPT_FILES
         },
-        () => resolve()
+        () => {
+          // Check for lastError to prevent "Unchecked runtime.lastError" warnings
+          // This occurs when the tab is showing an error page or restricted URL
+          if (chrome.runtime.lastError) {
+            // Silently ignore - tab may be an error page or restricted URL
+          }
+          resolve();
+        }
       );
     }).catch(() => {
       // Ignore injection errors for restricted pages.
@@ -50,13 +59,10 @@ importScripts(
     const settings = await background.storage.getSettings();
     const host = shared.getHostFromUrl(url);
     const override = settings.siteOverrides[host] || {};
-    const snoozed = override.snoozeUntil && override.snoozeUntil > Date.now();
     const enabled =
       settings.enabled &&
-      settings.mode !== shared.MODES.OFF &&
       override.enabled !== false &&
-      !override.allowlist &&
-      !snoozed;
+      !override.allowlist;
     return enabled;
   }
 
@@ -70,14 +76,12 @@ importScripts(
   function persistSiteState(host, settings) {
     if (!host || !settings) return;
     const override = settings.siteOverrides[host] || {};
-    const snoozed = override.snoozeUntil && override.snoozeUntil > Date.now();
     const trusted = !!override.allowlist;
-    const paused = trusted || override.enabled === false || snoozed;
+    const paused = trusted || override.enabled === false;
     chrome.storage.local.set({
       siteState: {
         trusted,
-        paused,
-        snoozeUntil: override.snoozeUntil || null
+        paused
       }
     });
   }
@@ -138,6 +142,10 @@ importScripts(
 
   chrome.tabs.onActivated.addListener((activeInfo) => {
     chrome.tabs.get(activeInfo.tabId, (tab) => {
+      // Check for lastError to prevent "Unchecked runtime.lastError" warnings
+      if (chrome.runtime.lastError) {
+        return;
+      }
       maybeInject(activeInfo.tabId, tab && tab.url);
     });
   });
@@ -194,17 +202,6 @@ importScripts(
     if (message.type === "fomoff:allow-site") {
       background.storage
         .setSiteOverride(message.host, { enabled: false, allowlist: true, snoozeUntil: null })
-        .then((settings) => {
-          persistSiteState(message.host, settings);
-          sendResponse(settings);
-        });
-      return true;
-    }
-
-    if (message.type === "fomoff:snooze-site") {
-      const snoozeUntil = Date.now() + 60 * 60 * 1000;
-      background.storage
-        .setSiteOverride(message.host, { enabled: false, allowlist: false, snoozeUntil })
         .then((settings) => {
           persistSiteState(message.host, settings);
           sendResponse(settings);
